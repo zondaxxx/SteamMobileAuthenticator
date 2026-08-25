@@ -339,7 +339,7 @@ class _NeoNavigation extends StatelessWidget {
         height: 70,
         padding: const EdgeInsets.all(7),
         decoration: BoxDecoration(
-          color: (dark ? const Color(0xff0a1421) : Colors.white).withValues(
+          color: (dark ? const Color(0xff03080c) : Colors.white).withValues(
             alpha: 0.96,
           ),
           borderRadius: BorderRadius.circular(25),

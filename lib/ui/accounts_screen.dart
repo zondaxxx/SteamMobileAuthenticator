@@ -101,6 +101,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                       widget.controller.sessionHealth[account.steamId] ??
                       SessionHealth.missing,
                   accent: _accentFor(index),
+                  onSessionTap: () => _showSessionInfo(account),
                   onDelete: () => _delete(account),
                 ),
               );
@@ -142,6 +143,138 @@ class _AccountsScreenState extends State<AccountsScreen> {
     NeoColors.mint,
   ][index % 4];
 
+  Future<void> _showSessionInfo(SteamAccount account) async {
+    final strings = AppStrings.of(context);
+    final health =
+        widget.controller.sessionHealth[account.steamId] ??
+        SessionHealth.missing;
+    final errorCode = widget.controller.sessionErrorCodes[account.steamId];
+    final color = switch (health) {
+      SessionHealth.healthy => NeoColors.mint,
+      SessionHealth.refreshable || SessionHealth.checking => NeoColors.amber,
+      SessionHealth.expired ||
+      SessionHealth.missing ||
+      SessionHealth.error => NeoColors.danger,
+    };
+    final canRetry =
+        health == SessionHealth.error || health == SessionHealth.refreshable;
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(strings.text('session_status_title')),
+        content: SingleChildScrollView(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.stretch,
+            children: <Widget>[
+              NeoSurface(
+                accent: color,
+                radius: 20,
+                padding: const EdgeInsets.all(16),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Icon(_healthIcon(health), color: color),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: <Widget>[
+                          Text(
+                            strings.text('session_health_${health.name}'),
+                            style: Theme.of(context).textTheme.titleSmall,
+                          ),
+                          const SizedBox(height: 6),
+                          Text(
+                            strings.text('session_health_${health.name}_body'),
+                            style: Theme.of(context).textTheme.bodySmall,
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              if (errorCode != null) ...<Widget>[
+                const SizedBox(height: 12),
+                NeoSurface(
+                  accent: NeoColors.danger,
+                  radius: 20,
+                  padding: const EdgeInsets.all(15),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        children: <Widget>[
+                          Text(
+                            strings.text('session_error_cause'),
+                            style: Theme.of(context).textTheme.labelLarge,
+                          ),
+                          const Spacer(),
+                          NeoPill(label: errorCode, color: NeoColors.danger),
+                        ],
+                      ),
+                      const SizedBox(height: 8),
+                      Text(strings.errorCode(errorCode)),
+                    ],
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              NeoSurface(
+                accent: NeoColors.mint,
+                radius: 20,
+                padding: const EdgeInsets.all(15),
+                child: Row(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    const Icon(Icons.password_rounded, color: NeoColors.mint),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Text(strings.text('session_codes_unaffected')),
+                    ),
+                  ],
+                ),
+              ),
+              if (health == SessionHealth.expired ||
+                  health == SessionHealth.missing) ...<Widget>[
+                const SizedBox(height: 12),
+                Text(
+                  strings.text('session_reimport_advice'),
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        ),
+        actions: <Widget>[
+          if (canRetry)
+            OutlinedButton.icon(
+              onPressed: () async {
+                Navigator.pop(context);
+                await widget.controller.refreshAccountMetadata();
+              },
+              icon: const Icon(Icons.refresh_rounded),
+              label: Text(strings.text('refresh')),
+            ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(strings.text('done')),
+          ),
+        ],
+      ),
+    );
+  }
+
+  IconData _healthIcon(SessionHealth value) => switch (value) {
+    SessionHealth.healthy => Icons.cloud_done_outlined,
+    SessionHealth.refreshable => Icons.sync_rounded,
+    SessionHealth.expired => Icons.cloud_off_outlined,
+    SessionHealth.missing => Icons.key_off_outlined,
+    SessionHealth.checking => Icons.hourglass_top_rounded,
+    SessionHealth.error => Icons.error_outline_rounded,
+  };
+
   Future<void> _delete(SteamAccount account) async {
     final strings = AppStrings.of(context);
     final confirmed = await showDialog<bool>(
@@ -172,6 +305,7 @@ class _AccountCard extends StatelessWidget {
     required this.profile,
     required this.health,
     required this.accent,
+    required this.onSessionTap,
     required this.onDelete,
   });
 
@@ -179,6 +313,7 @@ class _AccountCard extends StatelessWidget {
   final SteamProfile? profile;
   final SessionHealth health;
   final Color accent;
+  final VoidCallback onSessionTap;
   final VoidCallback onDelete;
 
   @override
@@ -243,10 +378,16 @@ class _AccountCard extends StatelessWidget {
                         style: Theme.of(context).textTheme.titleLarge,
                       ),
                       const SizedBox(height: 6),
-                      NeoPill(
-                        icon: _healthIcon(health),
-                        label: strings.text('session_health_${health.name}'),
-                        color: _healthColor(health),
+                      NeoPressable(
+                        onTap: onSessionTap,
+                        semanticLabel:
+                            '${strings.text('session_health_${health.name}')}. '
+                            '${strings.text('details')}',
+                        child: NeoPill(
+                          icon: _healthIcon(health),
+                          label: strings.text('session_health_${health.name}'),
+                          color: _healthColor(health),
+                        ),
                       ),
                     ],
                   ),

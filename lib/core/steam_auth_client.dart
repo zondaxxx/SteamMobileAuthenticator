@@ -102,22 +102,34 @@ class SteamAuthClient {
     required String accountName,
     required String password,
   }) async {
-    final response = await _client
-        .get(
-          Uri.https(
-            'api.steampowered.com',
-            '$_authPath/GetPasswordRSAPublicKey/v1/',
-            <String, String>{'account_name': accountName},
-          ),
-          headers: _headers,
-        )
-        .timeout(const Duration(seconds: 20));
-    final key = _responseObject(response, 'login_unavailable');
+    late final http.Response response;
+    try {
+      response = await _client
+          .get(
+            Uri.https(
+              'api.steampowered.com',
+              '$_authPath/GetPasswordRSAPublicKey/v1/',
+              <String, String>{'account_name': accountName},
+            ),
+            headers: _headers,
+          )
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw const SteamAuthException('login_network');
+    } on http.ClientException {
+      throw const SteamAuthException('login_network');
+    }
+    final decoded = _responseObject(response, 'login_invalid_response');
+    final nested = decoded['response'];
+    if (nested is! Map) {
+      throw const SteamAuthException('login_invalid_response');
+    }
+    final key = Map<String, dynamic>.from(nested);
     final modulus = key['publickey_mod']?.toString();
     final exponent = key['publickey_exp']?.toString();
     final timestamp = key['timestamp']?.toString();
     if (modulus == null || exponent == null || timestamp == null) {
-      throw const SteamAuthException('login_unavailable');
+      throw const SteamAuthException('login_invalid_response');
     }
     try {
       final publicKey = RSAPublicKey(
@@ -146,9 +158,11 @@ class SteamAuthClient {
         'account_name': accountName,
         'encrypted_password': credentials.password,
         'encryption_timestamp': credentials.timestamp,
+        'remember_login': 'true',
         'persistence': '1',
         'platform_type': '3',
         'device_friendly_name': deviceName,
+        'website_id': 'Mobile',
       },
       errorCode: 'login_bad_credentials',
     );
@@ -314,13 +328,20 @@ class SteamAuthClient {
     final query = accessToken == null
         ? null
         : <String, String>{'access_token': accessToken};
-    final response = await _client
-        .post(
-          Uri.https('api.steampowered.com', path, query),
-          headers: _headers,
-          body: body,
-        )
-        .timeout(const Duration(seconds: 20));
+    late final http.Response response;
+    try {
+      response = await _client
+          .post(
+            Uri.https('api.steampowered.com', path, query),
+            headers: _headers,
+            body: body,
+          )
+          .timeout(const Duration(seconds: 20));
+    } on TimeoutException {
+      throw const SteamAuthException('login_network');
+    } on http.ClientException {
+      throw const SteamAuthException('login_network');
+    }
     final decoded = _responseObject(response, errorCode);
     if (!unwrapResponse) return decoded;
     final nested = decoded['response'];
@@ -329,6 +350,12 @@ class SteamAuthClient {
   }
 
   Map<String, dynamic> _responseObject(http.Response response, String code) {
+    if (response.statusCode == 429) {
+      throw const SteamAuthException('login_rate_limited');
+    }
+    if (response.statusCode >= 500) {
+      throw const SteamAuthException('login_unavailable');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw SteamAuthException(code);
     }

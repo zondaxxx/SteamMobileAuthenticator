@@ -1,5 +1,8 @@
+import 'dart:async';
+
 import 'package:file_picker/file_picker.dart';
 import 'package:flutter/foundation.dart';
+import 'package:http/http.dart' as http;
 
 import 'background_tasks.dart';
 import 'core/inventory_client.dart';
@@ -49,6 +52,7 @@ class AppController extends ChangeNotifier {
   List<ActionHistoryEntry> history = const <ActionHistoryEntry>[];
   Map<int, SteamProfile> profiles = const <int, SteamProfile>{};
   Map<int, SessionHealth> sessionHealth = const <int, SessionHealth>{};
+  Map<int, String> sessionErrorCodes = const <int, String>{};
   Map<int, InventorySnapshot> inventories = const <int, InventorySnapshot>{};
   AppSettings settings = const AppSettings();
   DateTime? lastAutoRun;
@@ -187,24 +191,47 @@ class AppController extends ChangeNotifier {
   );
 
   Future<void> refreshAccountMetadata() async {
+    sessionHealth = <int, SessionHealth>{
+      ...sessionHealth,
+      for (final account in accounts)
+        if (account.steamId != 0)
+          account.steamId: switch (_steamClient.sessionHealth(account)) {
+            SessionHealth.healthy ||
+            SessionHealth.refreshable => SessionHealth.checking,
+            final status => status,
+          },
+    };
+    notifyListeners();
     final nextProfiles = Map<int, SteamProfile>.from(profiles);
     final nextHealth = Map<int, SessionHealth>.from(sessionHealth);
+    final nextErrors = Map<int, String>.from(sessionErrorCodes);
     for (final account in List<SteamAccount>.from(accounts)) {
       if (account.steamId == 0) continue;
-      nextHealth[account.steamId] = _steamClient.sessionHealth(account);
+      final initialHealth = _steamClient.sessionHealth(account);
+      nextHealth[account.steamId] = initialHealth;
+      nextErrors.remove(account.steamId);
+      if (initialHealth == SessionHealth.missing) continue;
+      if (initialHealth == SessionHealth.expired) {
+        nextErrors[account.steamId] = 'refresh_expired';
+        continue;
+      }
       try {
         final result = await _steamClient.fetchProfile(account);
         await _replaceAccount(result.$1);
         nextProfiles[account.steamId] = result.$2;
         nextHealth[account.steamId] = SessionHealth.healthy;
-      } catch (_) {
-        if (nextHealth[account.steamId] == SessionHealth.refreshable) {
-          nextHealth[account.steamId] = SessionHealth.error;
-        }
+      } catch (error) {
+        final code = _sessionFailureCode(error);
+        nextErrors[account.steamId] = code;
+        nextHealth[account.steamId] =
+            code == 'refresh_expired' || code == 'session_required'
+            ? SessionHealth.expired
+            : SessionHealth.error;
       }
     }
     profiles = nextProfiles;
     sessionHealth = nextHealth;
+    sessionErrorCodes = nextErrors;
     notifyListeners();
   }
 
@@ -444,6 +471,15 @@ class AppController extends ChangeNotifier {
       for (final account in accounts)
         account.steamId: _steamClient.sessionHealth(account),
     };
+    sessionErrorCodes = const <int, String>{};
+  }
+
+  String _sessionFailureCode(Object error) {
+    if (error is SteamApiException) return error.code;
+    if (error is TimeoutException || error is http.ClientException) {
+      return 'network_error';
+    }
+    return 'profile_failed';
   }
 
   @override

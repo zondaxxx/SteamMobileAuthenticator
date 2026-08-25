@@ -23,6 +23,10 @@ class AppStrings {
     final raw = error.toString();
     final match = RegExp(r'\(([^)]+)\)').firstMatch(raw);
     final code = match?.group(1) ?? raw;
+    return errorCode(code);
+  }
+
+  String errorCode(String code) {
     return text('error_$code') == 'error_$code'
         ? text('error_unknown')
         : text('error_$code');
@@ -58,7 +62,7 @@ class AppStrings {
     'theme': 'Appearance',
     'theme_system': 'System',
     'theme_light': 'Light',
-    'theme_dark': 'Dark',
+    'theme_dark': 'AMOLED',
     'language': 'Language',
     'language_system': 'System',
     'language_en': 'English',
@@ -103,7 +107,19 @@ class AppStrings {
     'session_health_expired': 'Session expired',
     'session_health_missing': 'Codes only',
     'session_health_checking': 'Checking session',
-    'session_health_error': 'Session error',
+    'session_health_error': 'Check failed',
+    'session_status_title': 'Steam session status',
+    'session_health_healthy_body':
+        'Steam accepted the current session. Online features can use it.',
+    'session_health_refreshable_body': 'The access token needs renewal. The app will use the refresh token automatically.',
+    'session_health_expired_body': 'The refresh token expired or Steam rejected it. Online features need a fresh Steam session.',
+    'session_health_missing_body': 'The maFile contains authenticator secrets, but no Steam session tokens. Codes work, while confirmations, QR login and profile loading are unavailable.',
+    'session_health_checking_body':
+        'The app is contacting Steam and validating the saved tokens.',
+    'session_health_error_body': 'Steam could not verify the saved session. The exact safe-to-display reason is shown below.',
+    'session_error_cause': 'Reason',
+    'session_codes_unaffected': 'Steam Guard codes are generated locally and are not affected by this status.',
+    'session_reimport_advice': 'To restore online features, import an up-to-date maFile with a valid session. Keep a backup and recovery code before replacing data.',
     'dry_run': 'Safe test mode',
     'dry_run_body': 'Evaluate rules and write decisions to Activity without accepting anything.',
     'disable_dry_run_title': 'Allow real automatic actions?',
@@ -202,6 +218,9 @@ class AppStrings {
         'This backup was created by an unsupported app version.',
     'error_qr_invalid': 'This is not a valid Steam sign-in QR code.',
     'error_login_unavailable': 'Steam sign-in is temporarily unavailable.',
+    'error_login_network': 'Could not reach Steam sign-in. Check the connection, VPN, DNS or ad blocker and try again.',
+    'error_login_rate_limited': 'Steam temporarily limited sign-in attempts. Wait a few minutes before trying again.',
+    'error_login_invalid_response': 'Steam returned an unexpected sign-in response. Update the app or try again later.',
     'error_login_encryption_failed':
         'Could not securely encrypt the Steam password.',
     'error_login_bad_credentials':
@@ -252,7 +271,7 @@ class AppStrings {
     'theme': 'Оформление',
     'theme_system': 'Системное',
     'theme_light': 'Светлое',
-    'theme_dark': 'Тёмное',
+    'theme_dark': 'AMOLED',
     'language': 'Язык',
     'language_system': 'Системный',
     'language_en': 'English',
@@ -297,7 +316,20 @@ class AppStrings {
     'session_health_expired': 'Сессия истекла',
     'session_health_missing': 'Только коды',
     'session_health_checking': 'Проверка сессии',
-    'session_health_error': 'Ошибка сессии',
+    'session_health_error': 'Не удалось проверить',
+    'session_status_title': 'Состояние сессии Steam',
+    'session_health_healthy_body':
+        'Steam принял текущую сессию. Сетевые функции могут её использовать.',
+    'session_health_refreshable_body': 'Access-токен нужно обновить. Приложение автоматически использует refresh-токен.',
+    'session_health_expired_body': 'Refresh-токен истёк или Steam его отклонил. Для сетевых функций нужна свежая сессия Steam.',
+    'session_health_missing_body': 'В maFile есть секреты аутентификатора, но нет токенов сессии Steam. Коды работают, а подтверждения, QR-вход и загрузка профиля недоступны.',
+    'session_health_checking_body':
+        'Приложение связывается со Steam и проверяет сохранённые токены.',
+    'session_health_error_body': 'Steam не удалось проверить сохранённую сессию. Ниже показана точная безопасная причина.',
+    'session_error_cause': 'Причина',
+    'session_codes_unaffected':
+        'Коды Steam Guard генерируются локально и не зависят от этого статуса.',
+    'session_reimport_advice': 'Чтобы восстановить сетевые функции, импортируй актуальный maFile с рабочей сессией. Перед заменой сохрани резервную копию и recovery code.',
     'dry_run': 'Безопасный тестовый режим',
     'dry_run_body':
         'Проверять правила и писать решения в историю, ничего не принимая.',
@@ -389,6 +421,9 @@ class AppStrings {
         'Копия создана неподдерживаемой версией приложения.',
     'error_qr_invalid': 'Это не QR-код входа Steam.',
     'error_login_unavailable': 'Вход Steam временно недоступен.',
+    'error_login_network': 'Не удалось связаться со входом Steam. Проверь интернет, VPN, DNS или блокировщик и повтори.',
+    'error_login_rate_limited': 'Steam временно ограничил попытки входа. Подожди несколько минут перед повтором.',
+    'error_login_invalid_response': 'Steam вернул неожиданный ответ входа. Обнови приложение или повтори позже.',
     'error_login_encryption_failed':
         'Не удалось безопасно зашифровать пароль Steam.',
     'error_login_bad_credentials': 'Steam отклонил логин или пароль.',

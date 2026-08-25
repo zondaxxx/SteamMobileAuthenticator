@@ -5,11 +5,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 abstract final class NeoColors {
-  static const darkBackground = Color(0xff050912);
-  static const darkBackgroundEnd = Color(0xff081321);
-  static const darkPanel = Color(0xff0d1726);
-  static const darkPanelHigh = Color(0xff14243a);
-  static const darkBorder = Color(0xff203a55);
+  static const darkBackground = Color(0xff000000);
+  static const darkBackgroundEnd = Color(0xff000000);
+  static const darkPanel = Color(0xff04070a);
+  static const darkPanelHigh = Color(0xff091018);
+  static const darkBorder = Color(0xff173149);
   static const blue = Color(0xff43a9ff);
   static const cyan = Color(0xff5de4ff);
   static const violet = Color(0xff8d7dff);
@@ -182,14 +182,14 @@ ThemeData steamNeoTheme(Brightness brightness) {
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: dark ? const Color(0xff101c2c) : Colors.white,
+      color: dark ? const Color(0xff050a10) : Colors.white,
       surfaceTintColor: Colors.transparent,
       elevation: 16,
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
     ),
     dialogTheme: DialogThemeData(
       elevation: 24,
-      backgroundColor: dark ? const Color(0xff0b1421) : const Color(0xfff8fbff),
+      backgroundColor: dark ? const Color(0xff030609) : const Color(0xfff8fbff),
       surfaceTintColor: Colors.transparent,
       shape: RoundedRectangleBorder(
         borderRadius: BorderRadius.circular(28),
@@ -199,7 +199,7 @@ ThemeData steamNeoTheme(Brightness brightness) {
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
       elevation: 16,
-      backgroundColor: dark ? const Color(0xff15263a) : const Color(0xff163a58),
+      backgroundColor: dark ? const Color(0xff071522) : const Color(0xff163a58),
       contentTextStyle: const TextStyle(color: Colors.white),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
@@ -310,7 +310,7 @@ class _NeoBackgroundPainter extends CustomPainter {
       Offset(size.width * (0.78 + shift * 0.05), size.height * 0.08),
       size.shortestSide * 0.72,
       (dark ? NeoColors.blue : const Color(0xff65b9f2)).withValues(
-        alpha: dark ? 0.12 : 0.2,
+        alpha: dark ? 0.055 : 0.2,
       ),
     );
     _orb(
@@ -318,7 +318,7 @@ class _NeoBackgroundPainter extends CustomPainter {
       Offset(size.width * (0.12 - shift * 0.04), size.height * 0.68),
       size.shortestSide * 0.62,
       (dark ? NeoColors.violet : const Color(0xffa79bf5)).withValues(
-        alpha: dark ? 0.075 : 0.13,
+        alpha: dark ? 0.03 : 0.13,
       ),
     );
   }
@@ -374,8 +374,8 @@ class NeoSurface extends StatelessWidget {
           end: Alignment.bottomRight,
           colors: dark
               ? <Color>[
-                  Color.lerp(NeoColors.darkPanelHigh, effectiveAccent, 0.045)!,
-                  NeoColors.darkPanel.withValues(alpha: 0.96),
+                  Color.lerp(NeoColors.darkPanelHigh, effectiveAccent, 0.032)!,
+                  NeoColors.darkPanel.withValues(alpha: 0.985),
                 ]
               : <Color>[
                   Colors.white.withValues(alpha: 0.96),
