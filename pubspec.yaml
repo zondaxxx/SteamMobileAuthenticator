@@ -15,12 +15,17 @@ dependencies:
     sdk: flutter
   flutter_localizations:
     sdk: flutter
-  flutter_secure_storage: ^11.0.0
+  flutter_secure_storage: 10.0.0
   http: ^1.6.0
   intl: ^0.20.3
   local_auth: ^3.0.2
   shared_preferences: ^2.5.5
-  workmanager: ^0.10.9
+  workmanager: 0.9.1+1
+
+dependency_overrides:
+  # Newer releases use Xcode 26-only background task APIs. GitHub's
+  # macOS 15 runners currently need this compatible Apple implementation.
+  workmanager_apple: 0.9.3+1
 
 dev_dependencies:
   flutter_lints: ^6.0.0

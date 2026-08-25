@@ -12,8 +12,9 @@ class AccountVault {
           const FlutterSecureStorage(
             aOptions: AndroidOptions(
               resetOnError: false,
-              migrateWithBackup: true,
-              storageNamespace: 'steam_mobile_authenticator',
+              migrateOnAlgorithmChange: true,
+              sharedPreferencesName: 'steam_mobile_authenticator',
+              preferencesKeyPrefix: 'sma',
             ),
             iOptions: IOSOptions(
               accountName: 'SteamMobileAuthenticator',
