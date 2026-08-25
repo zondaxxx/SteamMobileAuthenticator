@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../app_controller.dart';
 import '../core/models.dart';
 import '../l10n.dart';
+import 'neo_design.dart';
 
 class ConfirmationsScreen extends StatefulWidget {
   const ConfirmationsScreen({super.key, required this.controller});
@@ -22,8 +24,7 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
   SteamAccount? get _selectedAccount {
     final accounts = widget.controller.accounts;
     if (accounts.isEmpty) return null;
-    final index = _selectedIndex.clamp(0, accounts.length - 1);
-    return accounts[index];
+    return accounts[_selectedIndex.clamp(0, accounts.length - 1)];
   }
 
   @override
@@ -52,13 +53,18 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
                       DropdownMenuItem<int>(
                         value: index,
                         child: Text(
-                          accounts[index].accountName,
+                          widget
+                                  .controller
+                                  .profiles[accounts[index].steamId]
+                                  ?.personaName ??
+                              accounts[index].accountName,
                           overflow: TextOverflow.ellipsis,
                         ),
                       ),
                   ],
                   onChanged: (value) {
                     if (value == null) return;
+                    HapticFeedback.selectionClick();
                     setState(() {
                       _selectedIndex = value;
                       _items = const <SteamConfirmation>[];
@@ -68,15 +74,13 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
                 ),
               ),
               const SizedBox(width: 10),
-              IconButton.filledTonal(
+              NeoIconButton(
                 onPressed: _loading ? null : _refresh,
                 tooltip: strings.text('refresh'),
                 icon: _loading
-                    ? const SizedBox.square(
-                        dimension: 20,
-                        child: CircularProgressIndicator(strokeWidth: 2),
-                      )
-                    : const Icon(Icons.refresh_rounded),
+                    ? Icons.hourglass_top_rounded
+                    : Icons.refresh_rounded,
+                accent: NeoColors.cyan,
               ),
             ],
           ),
@@ -99,36 +103,68 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
             ),
           ),
         Expanded(
-          child: _items.isEmpty
-              ? Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24),
-                    child: Text(
-                      strings.text('no_confirmations'),
-                      textAlign: TextAlign.center,
-                      style: Theme.of(context).textTheme.titleMedium,
+          child: AnimatedSwitcher(
+            duration: const Duration(milliseconds: 320),
+            child: _items.isEmpty
+                ? Center(
+                    key: const ValueKey<String>('empty-confirmations'),
+                    child: Padding(
+                      padding: const EdgeInsets.all(28),
+                      child: NeoSurface(
+                        accent: NeoColors.mint,
+                        padding: const EdgeInsets.all(26),
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            const Icon(
+                              Icons.done_all_rounded,
+                              size: 46,
+                              color: NeoColors.mint,
+                            ),
+                            const SizedBox(height: 14),
+                            Text(
+                              strings.text('no_confirmations'),
+                              textAlign: TextAlign.center,
+                              style: Theme.of(context).textTheme.titleMedium,
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                  )
+                : RefreshIndicator(
+                    key: const ValueKey<String>('confirmation-list'),
+                    onRefresh: _refresh,
+                    child: ListView.separated(
+                      physics: const AlwaysScrollableScrollPhysics(),
+                      padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
+                      itemCount: _items.length,
+                      separatorBuilder: (_, _) => const SizedBox(height: 12),
+                      itemBuilder: (context, index) {
+                        final item = _items[index];
+                        return TweenAnimationBuilder<double>(
+                          tween: Tween<double>(begin: 0, end: 1),
+                          duration: Duration(milliseconds: 280 + index * 35),
+                          curve: Curves.easeOutCubic,
+                          builder: (context, value, child) => Opacity(
+                            opacity: value,
+                            child: Transform.translate(
+                              offset: Offset(0, 18 * (1 - value)),
+                              child: child,
+                            ),
+                          ),
+                          child: _ConfirmationCard(
+                            item: item,
+                            disabled: _loading,
+                            onDetails: () => _showDetails(item),
+                            onAccept: () => _act(item, true),
+                            onDecline: () => _act(item, false),
+                          ),
+                        );
+                      },
                     ),
                   ),
-                )
-              : RefreshIndicator(
-                  onRefresh: _refresh,
-                  child: ListView.separated(
-                    physics: const AlwaysScrollableScrollPhysics(),
-                    padding: const EdgeInsets.fromLTRB(16, 4, 16, 24),
-                    itemCount: _items.length,
-                    separatorBuilder: (_, _) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      final item = _items[index];
-                      return _ConfirmationCard(
-                        item: item,
-                        disabled: _loading,
-                        onDetails: () => _showDetails(item),
-                        onAccept: () => _act(item, true),
-                        onDecline: () => _act(item, false),
-                      );
-                    },
-                  ),
-                ),
+          ),
         ),
       ],
     );
@@ -137,6 +173,7 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
   Future<void> _refresh() async {
     final account = _selectedAccount;
     if (account == null) return;
+    HapticFeedback.selectionClick();
     setState(() {
       _loading = true;
       _error = null;
@@ -154,6 +191,11 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
   Future<void> _act(SteamConfirmation confirmation, bool accept) async {
     final account = _selectedAccount;
     if (account == null) return;
+    if (accept) {
+      HapticFeedback.mediumImpact();
+    } else {
+      HapticFeedback.selectionClick();
+    }
     setState(() {
       _loading = true;
       _error = null;
@@ -181,6 +223,7 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
   Future<void> _showDetails(SteamConfirmation confirmation) async {
     final account = _selectedAccount;
     if (account == null) return;
+    HapticFeedback.selectionClick();
     final future = widget.controller.confirmationDetails(
       account: account,
       confirmation: confirmation,
@@ -188,6 +231,11 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
     await showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
+        icon: Icon(
+          confirmation.isTrade
+              ? Icons.swap_horiz_rounded
+              : Icons.storefront_outlined,
+        ),
         title: Text(
           confirmation.headline.isEmpty
               ? confirmation.typeName
@@ -217,11 +265,15 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
                     if (details.partnerSteamId?.isNotEmpty == true)
                       Text('SteamID: ${details.partnerSteamId}'),
                     if (details.itemCount > 0)
-                      Text(
-                        '${AppStrings.of(context).text('items')}: '
-                        '${details.itemCount}',
+                      Padding(
+                        padding: const EdgeInsets.only(top: 8),
+                        child: NeoPill(
+                          label:
+                              '${AppStrings.of(context).text('items')}: ${details.itemCount}',
+                          icon: Icons.inventory_2_outlined,
+                        ),
                       ),
-                    const SizedBox(height: 12),
+                    const SizedBox(height: 14),
                     SelectableText(details.plainText),
                   ],
                 ),
@@ -260,89 +312,100 @@ class _ConfirmationCard extends StatelessWidget {
     final strings = AppStrings.of(context);
     final scheme = Theme.of(context).colorScheme;
     final iconUri = Uri.tryParse(item.icon);
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Row(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: <Widget>[
-                Container(
-                  width: 48,
-                  height: 48,
-                  decoration: BoxDecoration(
-                    color: scheme.surfaceContainerHighest,
-                    borderRadius: BorderRadius.circular(14),
-                  ),
-                  clipBehavior: Clip.antiAlias,
-                  child: iconUri?.scheme == 'https'
-                      ? Image.network(
-                          item.icon,
-                          fit: BoxFit.cover,
-                          errorBuilder: (_, _, _) =>
-                              const Icon(Icons.swap_horiz_rounded),
-                        )
-                      : const Icon(Icons.swap_horiz_rounded),
-                ),
-                const SizedBox(width: 14),
-                Expanded(
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Text(
-                        item.headline.isEmpty ? item.typeName : item.headline,
-                        style: Theme.of(context).textTheme.titleMedium
-                            ?.copyWith(fontWeight: FontWeight.w700),
-                      ),
-                      if (item.typeName.isNotEmpty)
-                        Text(
-                          item.typeName,
-                          style: Theme.of(context).textTheme.bodySmall
-                              ?.copyWith(color: scheme.onSurfaceVariant),
-                        ),
+    final accent = item.isTrade ? NeoColors.cyan : NeoColors.violet;
+    return NeoSurface(
+      accent: accent,
+      padding: const EdgeInsets.all(17),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: <Widget>[
+              Container(
+                width: 50,
+                height: 50,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: <Color>[
+                      accent.withValues(alpha: 0.24),
+                      accent.withValues(alpha: 0.07),
                     ],
                   ),
+                  borderRadius: BorderRadius.circular(17),
+                  border: Border.all(color: accent.withValues(alpha: 0.25)),
                 ),
-              ],
-            ),
-            if (item.summary.isNotEmpty) ...<Widget>[
-              const SizedBox(height: 14),
-              for (final line in item.summary)
-                Padding(
-                  padding: const EdgeInsets.only(bottom: 3),
-                  child: Text(line),
+                clipBehavior: Clip.antiAlias,
+                child: iconUri?.scheme == 'https'
+                    ? Image.network(
+                        item.icon,
+                        fit: BoxFit.cover,
+                        errorBuilder: (_, _, _) =>
+                            const Icon(Icons.swap_horiz_rounded),
+                      )
+                    : Icon(
+                        item.isTrade
+                            ? Icons.swap_horiz_rounded
+                            : Icons.storefront_outlined,
+                        color: accent,
+                      ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    Text(
+                      item.headline.isEmpty ? item.typeName : item.headline,
+                      style: Theme.of(context).textTheme.titleMedium,
+                    ),
+                    if (item.typeName.isNotEmpty) ...<Widget>[
+                      const SizedBox(height: 6),
+                      NeoPill(label: item.typeName, color: accent),
+                    ],
+                  ],
                 ),
+              ),
             ],
-            const SizedBox(height: 16),
-            Align(
-              alignment: Alignment.centerLeft,
-              child: TextButton.icon(
+          ),
+          if (item.summary.isNotEmpty) ...<Widget>[
+            const SizedBox(height: 15),
+            for (final line in item.summary)
+              Padding(
+                padding: const EdgeInsets.only(bottom: 4),
+                child: Text(
+                  line,
+                  style: TextStyle(color: scheme.onSurfaceVariant),
+                ),
+              ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: <Widget>[
+              IconButton(
+                tooltip: strings.text('details'),
                 onPressed: disabled ? null : onDetails,
                 icon: const Icon(Icons.receipt_long_outlined),
-                label: Text(strings.text('details')),
               ),
-            ),
-            Row(
-              children: <Widget>[
-                Expanded(
-                  child: OutlinedButton(
-                    onPressed: disabled ? null : onDecline,
-                    child: Text(strings.text('decline')),
-                  ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: OutlinedButton.icon(
+                  onPressed: disabled ? null : onDecline,
+                  icon: const Icon(Icons.close_rounded, size: 18),
+                  label: Text(strings.text('decline')),
                 ),
-                const SizedBox(width: 10),
-                Expanded(
-                  child: FilledButton(
-                    onPressed: disabled ? null : onAccept,
-                    child: Text(strings.text('accept')),
-                  ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: FilledButton.icon(
+                  onPressed: disabled ? null : onAccept,
+                  icon: const Icon(Icons.check_rounded, size: 18),
+                  label: Text(strings.text('accept')),
                 ),
-              ],
-            ),
-          ],
-        ),
+              ),
+            ],
+          ),
+        ],
       ),
     );
   }
@@ -361,15 +424,10 @@ class _InfoBanner extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final scheme = Theme.of(context).colorScheme;
-    final color = isError ? scheme.error : scheme.tertiary;
-    return Container(
-      width: double.infinity,
+    final color = isError ? NeoColors.danger : NeoColors.amber;
+    return NeoSurface(
+      accent: color,
       padding: const EdgeInsets.all(14),
-      decoration: BoxDecoration(
-        color: color.withValues(alpha: 0.1),
-        borderRadius: BorderRadius.circular(16),
-      ),
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: <Widget>[

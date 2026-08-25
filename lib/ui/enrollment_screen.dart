@@ -4,6 +4,7 @@ import 'package:flutter/services.dart';
 import '../app_controller.dart';
 import '../core/models.dart';
 import '../l10n.dart';
+import 'neo_design.dart';
 
 enum _EnrollStep { credentials, guard, polling, recovery, sms, done }
 
@@ -41,7 +42,7 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
-    return Scaffold(
+    return NeoScaffold(
       appBar: AppBar(title: Text(strings.text('add_authenticator'))),
       body: SafeArea(
         child: ListView(
@@ -50,27 +51,64 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
             _Progress(step: _step.index),
             const SizedBox(height: 24),
             if (_error != null)
-              Card(
-                color: Theme.of(context).colorScheme.errorContainer,
-                child: ListTile(
-                  leading: const Icon(Icons.error_outline_rounded),
-                  title: Text(strings.error(_error!)),
+              NeoSurface(
+                accent: NeoColors.danger,
+                padding: const EdgeInsets.all(14),
+                child: Row(
+                  children: <Widget>[
+                    const Icon(
+                      Icons.error_outline_rounded,
+                      color: NeoColors.danger,
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(child: Text(strings.error(_error!))),
+                  ],
                 ),
               ),
             if (_error != null) const SizedBox(height: 12),
-            switch (_step) {
-              _EnrollStep.credentials => _credentials(strings),
-              _EnrollStep.guard => _guard(strings),
-              _EnrollStep.polling => _waiting(strings),
-              _EnrollStep.recovery => _recovery(strings),
-              _EnrollStep.sms => _sms(strings),
-              _EnrollStep.done => _done(strings),
-            },
+            NeoSurface(
+              accent: _stepAccent,
+              padding: const EdgeInsets.all(20),
+              child: AnimatedSwitcher(
+                duration: const Duration(milliseconds: 360),
+                switchInCurve: Curves.easeOutCubic,
+                switchOutCurve: Curves.easeInCubic,
+                transitionBuilder: (child, animation) => FadeTransition(
+                  opacity: animation,
+                  child: SlideTransition(
+                    position: Tween<Offset>(
+                      begin: const Offset(0.04, 0.06),
+                      end: Offset.zero,
+                    ).animate(animation),
+                    child: child,
+                  ),
+                ),
+                child: KeyedSubtree(
+                  key: ValueKey<_EnrollStep>(_step),
+                  child: switch (_step) {
+                    _EnrollStep.credentials => _credentials(strings),
+                    _EnrollStep.guard => _guard(strings),
+                    _EnrollStep.polling => _waiting(strings),
+                    _EnrollStep.recovery => _recovery(strings),
+                    _EnrollStep.sms => _sms(strings),
+                    _EnrollStep.done => _done(strings),
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
     );
   }
+
+  Color get _stepAccent => switch (_step) {
+    _EnrollStep.credentials => NeoColors.blue,
+    _EnrollStep.guard || _EnrollStep.polling => NeoColors.cyan,
+    _EnrollStep.recovery => NeoColors.amber,
+    _EnrollStep.sms => NeoColors.violet,
+    _EnrollStep.done => NeoColors.mint,
+  };
 
   Widget _credentials(AppStrings strings) => Column(
     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -179,7 +217,10 @@ class _EnrollmentScreenState extends State<EnrollmentScreen> {
         const SizedBox(height: 10),
         Text(strings.text('save_recovery_body'), textAlign: TextAlign.center),
         const SizedBox(height: 20),
-        Card(
+        NeoSurface(
+          accent: NeoColors.amber,
+          radius: 20,
+          padding: EdgeInsets.zero,
           child: ListTile(
             title: SelectableText(
               code,
@@ -372,7 +413,41 @@ class _Progress extends StatelessWidget {
   final int step;
 
   @override
-  Widget build(BuildContext context) => LinearProgressIndicator(
-    value: ((step + 1) / _EnrollStep.values.length).clamp(0, 1),
+  Widget build(BuildContext context) => Row(
+    children: <Widget>[
+      for (
+        var index = 0;
+        index < _EnrollStep.values.length;
+        index++
+      ) ...<Widget>[
+        Expanded(
+          child: AnimatedContainer(
+            duration: const Duration(milliseconds: 320),
+            curve: Curves.easeOutCubic,
+            height: index == step ? 7 : 5,
+            decoration: BoxDecoration(
+              gradient: index <= step
+                  ? const LinearGradient(
+                      colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                    )
+                  : null,
+              color: index <= step
+                  ? null
+                  : Theme.of(context).colorScheme.outlineVariant,
+              borderRadius: BorderRadius.circular(99),
+              boxShadow: index == step
+                  ? <BoxShadow>[
+                      BoxShadow(
+                        color: NeoColors.cyan.withValues(alpha: 0.4),
+                        blurRadius: 10,
+                      ),
+                    ]
+                  : null,
+            ),
+          ),
+        ),
+        if (index < _EnrollStep.values.length - 1) const SizedBox(width: 6),
+      ],
+    ],
   );
 }

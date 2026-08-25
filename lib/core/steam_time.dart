@@ -13,6 +13,12 @@ class SteamTime {
 
   static int secondsRemaining() => 30 - (now() % 30);
 
+  static double secondsRemainingPrecise() {
+    final nowSeconds =
+        DateTime.now().millisecondsSinceEpoch / 1000 + _offsetSeconds;
+    return 30 - (nowSeconds % 30);
+  }
+
   static Future<void> align({http.Client? client, bool force = false}) async {
     if (!force &&
         _lastSync != null &&

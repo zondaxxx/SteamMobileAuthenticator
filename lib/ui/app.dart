@@ -5,6 +5,7 @@ import 'package:local_auth/local_auth.dart';
 import '../app_controller.dart';
 import '../l10n.dart';
 import 'home_shell.dart';
+import 'neo_design.dart';
 
 class SteamAuthenticatorApp extends StatelessWidget {
   const SteamAuthenticatorApp({super.key, required this.controller});
@@ -21,8 +22,8 @@ class SteamAuthenticatorApp extends StatelessWidget {
           debugShowCheckedModeBanner: false,
           title: 'Steam Mobile Authenticator',
           themeMode: controller.settings.themeMode,
-          theme: _theme(Brightness.light),
-          darkTheme: _theme(Brightness.dark),
+          theme: steamNeoTheme(Brightness.light),
+          darkTheme: steamNeoTheme(Brightness.dark),
           locale: localeCode == 'system' ? null : Locale(localeCode),
           supportedLocales: const <Locale>[Locale('en'), Locale('ru')],
           localizationsDelegates: const <LocalizationsDelegate<dynamic>>[
@@ -42,43 +43,70 @@ class SteamAuthenticatorApp extends StatelessWidget {
       },
     );
   }
-
-  ThemeData _theme(Brightness brightness) {
-    final scheme = ColorScheme.fromSeed(
-      seedColor: const Color(0xff3b82f6),
-      brightness: brightness,
-    );
-    return ThemeData(
-      useMaterial3: true,
-      colorScheme: scheme,
-      brightness: brightness,
-      scaffoldBackgroundColor: brightness == Brightness.dark
-          ? const Color(0xff0b0f17)
-          : const Color(0xfff6f8fc),
-      appBarTheme: const AppBarTheme(centerTitle: false, elevation: 0),
-      cardTheme: CardThemeData(
-        elevation: 0,
-        margin: EdgeInsets.zero,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
-      ),
-      inputDecorationTheme: InputDecorationTheme(
-        filled: true,
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(16),
-          borderSide: BorderSide.none,
-        ),
-      ),
-      navigationBarTheme: const NavigationBarThemeData(height: 72),
-    );
-  }
 }
 
-class _LoadingScreen extends StatelessWidget {
+class _LoadingScreen extends StatefulWidget {
   const _LoadingScreen();
 
   @override
+  State<_LoadingScreen> createState() => _LoadingScreenState();
+}
+
+class _LoadingScreenState extends State<_LoadingScreen>
+    with SingleTickerProviderStateMixin {
+  late final AnimationController _pulse;
+
+  @override
+  void initState() {
+    super.initState();
+    _pulse = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 1300),
+    )..repeat(reverse: true);
+  }
+
+  @override
+  void dispose() {
+    _pulse.dispose();
+    super.dispose();
+  }
+
+  @override
   Widget build(BuildContext context) {
-    return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    return NeoBackground(
+      child: Scaffold(
+        body: Center(
+          child: AnimatedBuilder(
+            animation: _pulse,
+            builder: (context, child) => Transform.scale(
+              scale: 0.94 + _pulse.value * 0.08,
+              child: Opacity(opacity: 0.7 + _pulse.value * 0.3, child: child),
+            ),
+            child: Container(
+              width: 76,
+              height: 76,
+              decoration: BoxDecoration(
+                gradient: const LinearGradient(
+                  colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                ),
+                borderRadius: BorderRadius.circular(25),
+                boxShadow: <BoxShadow>[
+                  BoxShadow(
+                    color: NeoColors.blue.withValues(alpha: 0.34),
+                    blurRadius: 32,
+                  ),
+                ],
+              ),
+              child: const Icon(
+                Icons.shield_rounded,
+                color: Colors.white,
+                size: 37,
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }
 
@@ -160,44 +188,71 @@ class _DeviceLockGateState extends State<DeviceLockGate>
   Widget build(BuildContext context) {
     if (_unlocked) return widget.child;
     final strings = AppStrings.of(context);
-    return Scaffold(
-      body: SafeArea(
-        child: Center(
-          child: Padding(
-            padding: const EdgeInsets.all(32),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: <Widget>[
-                Icon(
-                  Icons.lock_rounded,
-                  size: 56,
-                  color: Theme.of(context).colorScheme.primary,
+    return NeoBackground(
+      child: Scaffold(
+        body: SafeArea(
+          child: Center(
+            child: Padding(
+              padding: const EdgeInsets.all(28),
+              child: NeoSurface(
+                padding: const EdgeInsets.all(28),
+                accent: NeoColors.cyan,
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: <Widget>[
+                    Container(
+                      width: 72,
+                      height: 72,
+                      decoration: BoxDecoration(
+                        gradient: const LinearGradient(
+                          colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                        ),
+                        borderRadius: BorderRadius.circular(24),
+                        boxShadow: <BoxShadow>[
+                          BoxShadow(
+                            color: NeoColors.blue.withValues(alpha: 0.28),
+                            blurRadius: 28,
+                          ),
+                        ],
+                      ),
+                      child: const Icon(
+                        Icons.lock_rounded,
+                        size: 34,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    Text(
+                      strings.text('app_name'),
+                      textAlign: TextAlign.center,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    if (_unavailable) ...<Widget>[
+                      const SizedBox(height: 12),
+                      Text(
+                        strings.text('auth_unavailable'),
+                        textAlign: TextAlign.center,
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: _authenticating ? null : _unlock,
+                        icon: _authenticating
+                            ? const SizedBox.square(
+                                dimension: 18,
+                                child: CircularProgressIndicator(
+                                  strokeWidth: 2,
+                                ),
+                              )
+                            : const Icon(Icons.fingerprint_rounded),
+                        label: Text(strings.text('unlock')),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 20),
-                Text(
-                  strings.text('app_name'),
-                  textAlign: TextAlign.center,
-                  style: Theme.of(context).textTheme.headlineSmall,
-                ),
-                if (_unavailable) ...<Widget>[
-                  const SizedBox(height: 12),
-                  Text(
-                    strings.text('auth_unavailable'),
-                    textAlign: TextAlign.center,
-                  ),
-                ],
-                const SizedBox(height: 24),
-                FilledButton.icon(
-                  onPressed: _authenticating ? null : _unlock,
-                  icon: _authenticating
-                      ? const SizedBox.square(
-                          dimension: 18,
-                          child: CircularProgressIndicator(strokeWidth: 2),
-                        )
-                      : const Icon(Icons.fingerprint_rounded),
-                  label: Text(strings.text('unlock')),
-                ),
-              ],
+              ),
             ),
           ),
         ),

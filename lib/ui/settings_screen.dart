@@ -4,6 +4,7 @@ import 'package:local_auth/local_auth.dart';
 
 import '../app_controller.dart';
 import '../l10n.dart';
+import 'neo_design.dart';
 
 class SettingsScreen extends StatelessWidget {
   const SettingsScreen({super.key, required this.controller});
@@ -20,38 +21,42 @@ class SettingsScreen extends StatelessWidget {
       padding: const EdgeInsets.fromLTRB(16, 8, 16, 32),
       children: <Widget>[
         _SectionTitle(strings.text('theme')),
-        Card(
-          child: Padding(
-            padding: const EdgeInsets.all(14),
-            child: SegmentedButton<ThemeMode>(
-              segments: <ButtonSegment<ThemeMode>>[
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.system,
-                  icon: const Icon(Icons.brightness_auto_rounded),
-                  label: Text(strings.text('theme_system')),
+        NeoSurface(
+          accent: NeoColors.blue,
+          padding: const EdgeInsets.all(7),
+          child: Row(
+            children: <Widget>[
+              _ThemeChoice(
+                icon: Icons.brightness_auto_rounded,
+                label: strings.text('theme_system'),
+                selected: settings.themeMode == ThemeMode.system,
+                onTap: () => controller.updateSettings(
+                  settings.copyWith(themeMode: ThemeMode.system),
                 ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.light,
-                  icon: const Icon(Icons.light_mode_outlined),
-                  label: Text(strings.text('theme_light')),
+              ),
+              _ThemeChoice(
+                icon: Icons.light_mode_outlined,
+                label: strings.text('theme_light'),
+                selected: settings.themeMode == ThemeMode.light,
+                onTap: () => controller.updateSettings(
+                  settings.copyWith(themeMode: ThemeMode.light),
                 ),
-                ButtonSegment<ThemeMode>(
-                  value: ThemeMode.dark,
-                  icon: const Icon(Icons.dark_mode_outlined),
-                  label: Text(strings.text('theme_dark')),
+              ),
+              _ThemeChoice(
+                icon: Icons.dark_mode_outlined,
+                label: strings.text('theme_dark'),
+                selected: settings.themeMode == ThemeMode.dark,
+                onTap: () => controller.updateSettings(
+                  settings.copyWith(themeMode: ThemeMode.dark),
                 ),
-              ],
-              selected: <ThemeMode>{settings.themeMode},
-              onSelectionChanged: (selection) {
-                controller.updateSettings(
-                  settings.copyWith(themeMode: selection.first),
-                );
-              },
-            ),
+              ),
+            ],
           ),
         ),
         const SizedBox(height: 12),
-        Card(
+        NeoSurface(
+          accent: NeoColors.cyan,
+          padding: EdgeInsets.zero,
           child: ListTile(
             leading: const Icon(Icons.language_rounded),
             title: Text(strings.text('language')),
@@ -80,7 +85,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SectionTitle(strings.text('security')),
-        Card(
+        NeoSurface(
+          accent: NeoColors.mint,
+          padding: EdgeInsets.zero,
           child: SwitchListTile(
             secondary: const Icon(Icons.fingerprint_rounded),
             title: Text(strings.text('biometric_lock')),
@@ -90,7 +97,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SectionTitle(strings.text('automation')),
-        Card(
+        NeoSurface(
+          accent: NeoColors.amber,
+          padding: EdgeInsets.zero,
           child: Column(
             children: <Widget>[
               SwitchListTile(
@@ -209,7 +218,9 @@ class SettingsScreen extends StatelessWidget {
           text: strings.text('background_note'),
         ),
         _SectionTitle(strings.text('notifications')),
-        Card(
+        NeoSurface(
+          accent: NeoColors.cyan,
+          padding: EdgeInsets.zero,
           child: Column(
             children: <Widget>[
               SwitchListTile(
@@ -235,7 +246,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SectionTitle(strings.text('inventory_settings')),
-        Card(
+        NeoSurface(
+          accent: NeoColors.violet,
+          padding: EdgeInsets.zero,
           child: ListTile(
             leading: const Icon(Icons.currency_exchange_rounded),
             title: Text(strings.text('currency')),
@@ -260,7 +273,9 @@ class SettingsScreen extends StatelessWidget {
           ),
         ),
         _SectionTitle(strings.text('storage')),
-        Card(
+        NeoSurface(
+          accent: NeoColors.blue,
+          padding: EdgeInsets.zero,
           child: Column(
             children: <Widget>[
               ListTile(
@@ -567,10 +582,11 @@ class _SectionTitle extends StatelessWidget {
     return Padding(
       padding: const EdgeInsets.fromLTRB(4, 24, 4, 10),
       child: Text(
-        text,
-        style: Theme.of(context).textTheme.titleSmall?.copyWith(
+        text.toUpperCase(),
+        style: Theme.of(context).textTheme.labelSmall?.copyWith(
           color: Theme.of(context).colorScheme.primary,
-          fontWeight: FontWeight.w700,
+          fontWeight: FontWeight.w800,
+          letterSpacing: 1.5,
         ),
       ),
     );
@@ -585,16 +601,84 @@ class _NoteCard extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Row(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: <Widget>[
-            Icon(icon, color: Theme.of(context).colorScheme.primary),
-            const SizedBox(width: 14),
-            Expanded(child: Text(text)),
-          ],
+    return NeoSurface(
+      accent: NeoColors.violet,
+      radius: 20,
+      padding: const EdgeInsets.all(16),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: <Widget>[
+          Icon(icon, color: Theme.of(context).colorScheme.primary),
+          const SizedBox(width: 14),
+          Expanded(child: Text(text)),
+        ],
+      ),
+    );
+  }
+}
+
+class _ThemeChoice extends StatelessWidget {
+  const _ThemeChoice({
+    required this.icon,
+    required this.label,
+    required this.selected,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final bool selected;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final primary = Theme.of(context).colorScheme.primary;
+    return Expanded(
+      child: NeoPressable(
+        onTap: onTap,
+        haptic: true,
+        semanticLabel: label,
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 250),
+          curve: Curves.easeOutCubic,
+          padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
+          decoration: BoxDecoration(
+            gradient: selected
+                ? LinearGradient(
+                    colors: <Color>[
+                      primary.withValues(alpha: 0.24),
+                      NeoColors.cyan.withValues(alpha: 0.08),
+                    ],
+                  )
+                : null,
+            borderRadius: BorderRadius.circular(18),
+            border: selected
+                ? Border.all(color: primary.withValues(alpha: 0.28))
+                : null,
+          ),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                icon,
+                color: selected
+                    ? primary
+                    : Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 6),
+              Text(
+                label,
+                maxLines: 1,
+                overflow: TextOverflow.ellipsis,
+                style: Theme.of(context).textTheme.labelSmall?.copyWith(
+                  color: selected
+                      ? primary
+                      : Theme.of(context).colorScheme.onSurfaceVariant,
+                  fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
