@@ -76,7 +76,7 @@ jobs:
           if [ -f build/app/outputs/flutter-apk/app-release.apk ]; then
             cp build/app/outputs/flutter-apk/app-release.apk dist/SteamMobileAuthenticator-android-release.apk
           fi
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v5
         with:
           name: SteamMobileAuthenticator-Android
           path: dist/*.apk
@@ -97,13 +97,15 @@ jobs:
       - run: flutter pub get
       - name: Build without code signing
         run: flutter build ios --release --no-codesign
-      - name: Package unsigned Runner.app
+      - name: Package unsigned IPA
         run: |
-          mkdir -p dist
-          ditto -c -k --sequesterRsrc --keepParent build/ios/iphoneos/Runner.app dist/SteamMobileAuthenticator-ios-unsigned.zip
-      - uses: actions/upload-artifact@v4
+          mkdir -p dist/Payload
+          ditto build/ios/iphoneos/Runner.app dist/Payload/Runner.app
+          (cd dist && ditto -c -k --sequesterRsrc --keepParent Payload SteamMobileAuthenticator-ios-unsigned.ipa)
+          rm -rf dist/Payload
+      - uses: actions/upload-artifact@v5
         with:
           name: SteamMobileAuthenticator-iOS-unsigned
-          path: dist/SteamMobileAuthenticator-ios-unsigned.zip
+          path: dist/SteamMobileAuthenticator-ios-unsigned.ipa
           if-no-files-found: error
           retention-days: 14

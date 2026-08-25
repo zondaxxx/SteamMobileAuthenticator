@@ -44,9 +44,9 @@ Android WorkManager и iOS BGTaskScheduler сами определяют фак�
 Workflow `.github/workflows/mobile-builds.yml` запускает анализ и тесты, затем публикует два артефакта:
 
 - `SteamMobileAuthenticator-Android` — устанавливаемый debug APK;
-- `SteamMobileAuthenticator-iOS-unsigned` — ZIP с unsigned `Runner.app`.
+- `SteamMobileAuthenticator-iOS-unsigned` — unsigned IPA для последующей подписи.
 
-Unsigned iOS-сборку нельзя установить на обычное устройство без собственной подписи Apple. Её нужно переподписать через Xcode, Apple Developer account или разрешённую в твоей среде систему sideloading.
+Unsigned IPA нельзя установить на обычное устройство без собственной подписи Apple. Его нужно переподписать через Xcode, Apple Developer account или разрешённую в твоей среде систему sideloading.
 
 Для дополнительного подписанного Android release APK добавь GitHub Actions secrets:
 
