@@ -6,6 +6,10 @@ import '../data/mafile_importer.dart';
 import '../l10n.dart';
 import 'accounts_screen.dart';
 import 'confirmations_screen.dart';
+import 'enrollment_screen.dart';
+import 'history_screen.dart';
+import 'inventory_screen.dart';
+import 'qr_login_screen.dart';
 import 'settings_screen.dart';
 
 class HomeShell extends StatefulWidget {
@@ -26,15 +30,34 @@ class _HomeShellState extends State<HomeShell> {
     final titles = <String>[
       strings.text('accounts'),
       strings.text('confirmations'),
+      strings.text('inventory'),
+      strings.text('history'),
       strings.text('settings'),
     ];
     return Scaffold(
-      appBar: AppBar(title: Text(titles[_index])),
+      appBar: AppBar(
+        title: Text(titles[_index]),
+        actions: <Widget>[
+          IconButton(
+            tooltip: strings.text('qr_login'),
+            onPressed: widget.controller.accounts.isEmpty ? null : _openQr,
+            icon: const Icon(Icons.qr_code_scanner_rounded),
+          ),
+          IconButton(
+            tooltip: strings.text('add_authenticator'),
+            onPressed: _openEnrollment,
+            icon: const Icon(Icons.person_add_alt_1_rounded),
+          ),
+          const SizedBox(width: 4),
+        ],
+      ),
       body: IndexedStack(
         index: _index,
         children: <Widget>[
           AccountsScreen(controller: widget.controller, onImport: _import),
           ConfirmationsScreen(controller: widget.controller),
+          InventoryScreen(controller: widget.controller),
+          HistoryScreen(controller: widget.controller),
           SettingsScreen(controller: widget.controller),
         ],
       ),
@@ -60,11 +83,37 @@ class _HomeShellState extends State<HomeShell> {
             label: strings.text('confirmations'),
           ),
           NavigationDestination(
+            icon: const Icon(Icons.inventory_2_outlined),
+            selectedIcon: const Icon(Icons.inventory_2_rounded),
+            label: strings.text('inventory'),
+          ),
+          NavigationDestination(
+            icon: const Icon(Icons.history_rounded),
+            selectedIcon: const Icon(Icons.history_rounded),
+            label: strings.text('history'),
+          ),
+          NavigationDestination(
             icon: const Icon(Icons.tune_rounded),
             selectedIcon: const Icon(Icons.tune_rounded),
             label: strings.text('settings'),
           ),
         ],
+      ),
+    );
+  }
+
+  Future<void> _openQr() {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => QrLoginScreen(controller: widget.controller),
+      ),
+    );
+  }
+
+  Future<void> _openEnrollment() {
+    return Navigator.of(context).push<void>(
+      MaterialPageRoute<void>(
+        builder: (_) => EnrollmentScreen(controller: widget.controller),
       ),
     );
   }

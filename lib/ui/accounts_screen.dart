@@ -52,6 +52,10 @@ class _AccountsScreenState extends State<AccountsScreen> {
       separatorBuilder: (_, _) => const SizedBox(height: 12),
       itemBuilder: (context, index) => _AccountCard(
         account: accounts[index],
+        profile: widget.controller.profiles[accounts[index].steamId],
+        health:
+            widget.controller.sessionHealth[accounts[index].steamId] ??
+            SessionHealth.missing,
         onDelete: () => _delete(accounts[index]),
       ),
     );
@@ -81,9 +85,16 @@ class _AccountsScreenState extends State<AccountsScreen> {
 }
 
 class _AccountCard extends StatelessWidget {
-  const _AccountCard({required this.account, required this.onDelete});
+  const _AccountCard({
+    required this.account,
+    required this.profile,
+    required this.health,
+    required this.onDelete,
+  });
 
   final SteamAccount account;
+  final SteamProfile? profile;
+  final SessionHealth health;
   final VoidCallback onDelete;
 
   @override
@@ -108,22 +119,54 @@ class _AccountCard extends StatelessWidget {
             children: <Widget>[
               Row(
                 children: <Widget>[
+                  CircleAvatar(
+                    radius: 23,
+                    foregroundImage: profile?.avatarUrl?.isNotEmpty == true
+                        ? NetworkImage(profile!.avatarUrl!)
+                        : null,
+                    child: profile?.avatarUrl?.isNotEmpty == true
+                        ? null
+                        : Text(
+                            (profile?.personaName ?? account.accountName)
+                                .characters
+                                .first
+                                .toUpperCase(),
+                          ),
+                  ),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: <Widget>[
                         Text(
-                          account.accountName,
+                          profile?.personaName ?? account.accountName,
                           maxLines: 1,
                           overflow: TextOverflow.ellipsis,
                           style: Theme.of(context).textTheme.titleMedium
                               ?.copyWith(fontWeight: FontWeight.w700),
                         ),
                         if (account.steamId != 0)
-                          Text(
-                            account.steamId.toString(),
-                            style: Theme.of(context).textTheme.bodySmall
-                                ?.copyWith(color: scheme.onSurfaceVariant),
+                          Row(
+                            children: <Widget>[
+                              Icon(
+                                _healthIcon(health),
+                                size: 14,
+                                color: _healthColor(context, health),
+                              ),
+                              const SizedBox(width: 4),
+                              Flexible(
+                                child: Text(
+                                  '${strings.text('session_health_${health.name}')} · '
+                                  '${account.steamId}',
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                  style: Theme.of(context).textTheme.bodySmall
+                                      ?.copyWith(
+                                        color: scheme.onSurfaceVariant,
+                                      ),
+                                ),
+                              ),
+                            ],
                           ),
                       ],
                     ),
@@ -188,6 +231,24 @@ class _AccountCard extends StatelessWidget {
       ),
     );
   }
+
+  IconData _healthIcon(SessionHealth value) => switch (value) {
+    SessionHealth.healthy => Icons.cloud_done_outlined,
+    SessionHealth.refreshable => Icons.sync_rounded,
+    SessionHealth.expired => Icons.cloud_off_outlined,
+    SessionHealth.missing => Icons.key_off_outlined,
+    SessionHealth.checking => Icons.hourglass_top_rounded,
+    SessionHealth.error => Icons.error_outline_rounded,
+  };
+
+  Color _healthColor(BuildContext context, SessionHealth value) =>
+      switch (value) {
+        SessionHealth.healthy => Colors.green,
+        SessionHealth.refreshable || SessionHealth.checking => Colors.orange,
+        SessionHealth.expired ||
+        SessionHealth.missing ||
+        SessionHealth.error => Theme.of(context).colorScheme.error,
+      };
 }
 
 class _EmptyAccounts extends StatelessWidget {

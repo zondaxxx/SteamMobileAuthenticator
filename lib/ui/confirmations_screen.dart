@@ -122,6 +122,7 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
                       return _ConfirmationCard(
                         item: item,
                         disabled: _loading,
+                        onDetails: () => _showDetails(item),
                         onAccept: () => _act(item, true),
                         onDecline: () => _act(item, false),
                       );
@@ -176,18 +177,81 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
       if (mounted) setState(() => _loading = false);
     }
   }
+
+  Future<void> _showDetails(SteamConfirmation confirmation) async {
+    final account = _selectedAccount;
+    if (account == null) return;
+    final future = widget.controller.confirmationDetails(
+      account: account,
+      confirmation: confirmation,
+    );
+    await showDialog<void>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(
+          confirmation.headline.isEmpty
+              ? confirmation.typeName
+              : confirmation.headline,
+        ),
+        content: SizedBox(
+          width: double.maxFinite,
+          child: FutureBuilder<SteamConfirmationDetails>(
+            future: future,
+            builder: (context, snapshot) {
+              if (snapshot.connectionState != ConnectionState.done) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              if (snapshot.hasError) {
+                return Text(AppStrings.of(context).error(snapshot.error!));
+              }
+              final details = snapshot.data!;
+              return SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: <Widget>[
+                    if (details.partnerName?.isNotEmpty == true)
+                      Text(
+                        details.partnerName!,
+                        style: Theme.of(context).textTheme.titleMedium,
+                      ),
+                    if (details.partnerSteamId?.isNotEmpty == true)
+                      Text('SteamID: ${details.partnerSteamId}'),
+                    if (details.itemCount > 0)
+                      Text(
+                        '${AppStrings.of(context).text('items')}: '
+                        '${details.itemCount}',
+                      ),
+                    const SizedBox(height: 12),
+                    SelectableText(details.plainText),
+                  ],
+                ),
+              );
+            },
+          ),
+        ),
+        actions: <Widget>[
+          FilledButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.of(context).text('done')),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _ConfirmationCard extends StatelessWidget {
   const _ConfirmationCard({
     required this.item,
     required this.disabled,
+    required this.onDetails,
     required this.onAccept,
     required this.onDecline,
   });
 
   final SteamConfirmation item;
   final bool disabled;
+  final VoidCallback onDetails;
   final VoidCallback onAccept;
   final VoidCallback onDecline;
 
@@ -252,6 +316,14 @@ class _ConfirmationCard extends StatelessWidget {
                 ),
             ],
             const SizedBox(height: 16),
+            Align(
+              alignment: Alignment.centerLeft,
+              child: TextButton.icon(
+                onPressed: disabled ? null : onDetails,
+                icon: const Icon(Icons.receipt_long_outlined),
+                label: Text(strings.text('details')),
+              ),
+            ),
             Row(
               children: <Widget>[
                 Expanded(

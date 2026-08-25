@@ -32,6 +32,19 @@ class SteamClient {
   final bool _ownsClient;
   static const _mobileClientVersion = '777777 3.6.4';
 
+  SessionHealth sessionHealth(SteamAccount account) {
+    final access = account.session.accessToken;
+    if (access?.isNotEmpty == true && !_jwtExpiresSoon(access!)) {
+      return SessionHealth.healthy;
+    }
+    final refresh = account.session.refreshToken;
+    if (refresh?.isNotEmpty != true) return SessionHealth.missing;
+    if (_jwtExpiresSoon(refresh!, grace: Duration.zero)) {
+      return SessionHealth.expired;
+    }
+    return SessionHealth.refreshable;
+  }
+
   Future<SteamAccount> ensureAccessToken(SteamAccount account) async {
     final token = account.session.accessToken;
     if (token?.isNotEmpty == true && !_jwtExpiresSoon(token!)) {
@@ -123,6 +136,84 @@ class SteamClient {
               .toList(growable: false)
         : const <SteamConfirmation>[];
     return ConfirmationBatch(account: working, items: items);
+  }
+
+  Future<SteamConfirmationDetails> fetchConfirmationDetails({
+    required SteamAccount account,
+    required SteamConfirmation confirmation,
+  }) async {
+    _validateConfirmationAccount(account);
+    var working = await ensureAccessToken(account);
+    if (working.session.sessionId?.isNotEmpty != true) {
+      working = working.copyWith(
+        session: working.session.copyWith(sessionId: _newSessionId()),
+      );
+    }
+    final uri = _confirmationUri(
+      working,
+      '/mobileconf/detailspage/${confirmation.id}',
+      'details',
+    );
+    final response = await _client
+        .get(uri, headers: _headers(working))
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const SteamApiException('network_error');
+    }
+    var html = response.body;
+    try {
+      final decoded = jsonDecode(response.body);
+      if (decoded is Map) {
+        if (decoded['success'] != true) {
+          throw const SteamApiException('details_failed');
+        }
+        html = decoded['html']?.toString() ?? '';
+      }
+    } on FormatException {
+      // Some Steam deployments return HTML directly.
+    }
+    if (html.trim().isEmpty) {
+      throw const SteamApiException('details_failed');
+    }
+    return _parseConfirmationDetails(html);
+  }
+
+  Future<(SteamAccount, SteamProfile)> fetchProfile(
+    SteamAccount account,
+  ) async {
+    final working = await ensureAccessToken(account);
+    final token = working.session.accessToken;
+    final uri = Uri.https(
+      'api.steampowered.com',
+      '/ISteamUserOAuth/GetUserSummaries/v0001/',
+      <String, String>{
+        'access_token': token!,
+        'steamids': working.steamId.toString(),
+      },
+    );
+    final response = await _client
+        .get(
+          uri,
+          headers: const <String, String>{
+            'User-Agent': 'SteamMobileAuthenticator/1.1',
+            'Accept': 'application/json',
+          },
+        )
+        .timeout(const Duration(seconds: 20));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const SteamApiException('profile_failed');
+    }
+    final decoded = _decodeObject(response.body);
+    final nested = decoded['response'];
+    final players =
+        decoded['players'] ?? (nested is Map ? nested['players'] : null);
+    if (players is! List || players.isEmpty || players.first is! Map) {
+      throw const SteamApiException('profile_failed');
+    }
+    return (
+      working,
+      SteamProfile.fromJson(Map<String, dynamic>.from(players.first as Map)),
+    );
   }
 
   Future<SteamAccount> actOnConfirmation({
@@ -226,6 +317,85 @@ class SteamClient {
       // Converted to a generic, secret-free error below.
     }
     throw const SteamApiException('invalid_response');
+  }
+
+  SteamConfirmationDetails _parseConfirmationDetails(String html) {
+    String decodeEntities(String value) => value
+        .replaceAll('&amp;', '&')
+        .replaceAll('&quot;', '"')
+        .replaceAll('&#39;', "'")
+        .replaceAll('&lt;', '<')
+        .replaceAll('&gt;', '>')
+        .replaceAll('&nbsp;', ' ');
+
+    final miniProfile = RegExp(
+      r'''data-miniprofile\s*=\s*["'](\d+)["']''',
+      caseSensitive: false,
+    ).firstMatch(html);
+    final profilePath = RegExp(
+      r'(?:steamcommunity\.com)?/profiles/(7656119\d{10})',
+      caseSensitive: false,
+    ).firstMatch(html);
+    String? partnerSteamId = profilePath?.group(1);
+    if (partnerSteamId == null && miniProfile != null) {
+      final accountId = BigInt.tryParse(miniProfile.group(1)!);
+      if (accountId != null) {
+        partnerSteamId = (BigInt.parse('76561197960265728') + accountId)
+            .toString();
+      }
+    }
+
+    final nameMatch = RegExp(
+      r'''(?:mobileconf_trade_partner|trade_partner[^"']*)[^>]*>(.*?)</''',
+      caseSensitive: false,
+      dotAll: true,
+    ).firstMatch(html);
+    final partnerName = nameMatch == null
+        ? null
+        : decodeEntities(
+            nameMatch
+                .group(1)!
+                .replaceAll(RegExp(r'<[^>]+>'), ' ')
+                .replaceAll(RegExp(r'\s+'), ' ')
+                .trim(),
+          );
+    final itemMarkers = RegExp(
+      r'''class\s*=\s*["'][^"']*(?:trade_item|mobileconf_item)[^"']*["']''',
+      caseSensitive: false,
+    ).allMatches(html).length;
+    final itemIds =
+        RegExp(
+              r'''(?:data-assetid|id)\s*=\s*["'](?:item)?(\d{5,})["']''',
+              caseSensitive: false,
+            )
+            .allMatches(html)
+            .map((match) => match.group(1))
+            .whereType<String>()
+            .toSet();
+    final plainText = decodeEntities(
+      html
+          .replaceAll(
+            RegExp(
+              r'<(?:script|style)[^>]*>.*?</(?:script|style)>',
+              caseSensitive: false,
+              dotAll: true,
+            ),
+            ' ',
+          )
+          .replaceAll(RegExp(r'<br\s*/?>', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'</(?:div|p|li)>', caseSensitive: false), '\n')
+          .replaceAll(RegExp(r'<[^>]+>'), ' ')
+          .replaceAll(RegExp(r'[ \t]+'), ' ')
+          .replaceAll(RegExp(r'\n\s*\n+'), '\n')
+          .trim(),
+    );
+    return SteamConfirmationDetails(
+      plainText: plainText,
+      itemCount: itemIds.isNotEmpty ? itemIds.length : itemMarkers,
+      partnerSteamId: partnerSteamId,
+      partnerName: partnerName?.isEmpty == true ? null : partnerName,
+      html: html,
+    );
   }
 
   bool _jwtExpiresSoon(

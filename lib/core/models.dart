@@ -195,3 +195,246 @@ class SteamConfirmation {
     );
   }
 }
+
+class SteamConfirmationDetails {
+  const SteamConfirmationDetails({
+    required this.plainText,
+    required this.itemCount,
+    this.partnerSteamId,
+    this.partnerName,
+    this.html,
+  });
+
+  final String plainText;
+  final int itemCount;
+  final String? partnerSteamId;
+  final String? partnerName;
+  final String? html;
+
+  bool get hasVerifiedPartner => partnerSteamId?.isNotEmpty == true;
+}
+
+class SteamProfile {
+  const SteamProfile({
+    required this.steamId,
+    required this.personaName,
+    this.avatarUrl,
+    this.profileUrl,
+    this.lastLogoff,
+  });
+
+  final int steamId;
+  final String personaName;
+  final String? avatarUrl;
+  final String? profileUrl;
+  final DateTime? lastLogoff;
+
+  factory SteamProfile.fromJson(Map<String, dynamic> json) => SteamProfile(
+    steamId: _asInt(json['steamid']),
+    personaName: _asString(json['personaname']) ?? 'Steam user',
+    avatarUrl:
+        _asString(json['avatarfull']) ??
+        _asString(json['avatarmedium']) ??
+        _asString(json['avatar']),
+    profileUrl: _asString(json['profileurl']),
+    lastLogoff: _asInt(json['lastlogoff']) == 0
+        ? null
+        : DateTime.fromMillisecondsSinceEpoch(
+            _asInt(json['lastlogoff']) * 1000,
+            isUtc: true,
+          ).toLocal(),
+  );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'steamid': steamId,
+    'personaname': personaName,
+    'avatarfull': avatarUrl,
+    'profileurl': profileUrl,
+    'lastlogoff': lastLogoff?.toUtc().millisecondsSinceEpoch == null
+        ? null
+        : lastLogoff!.toUtc().millisecondsSinceEpoch ~/ 1000,
+  };
+}
+
+enum SessionHealth { healthy, refreshable, expired, missing, checking, error }
+
+class InventoryItem {
+  const InventoryItem({
+    required this.assetId,
+    required this.appId,
+    required this.contextId,
+    required this.classId,
+    required this.instanceId,
+    required this.amount,
+    required this.name,
+    required this.marketHashName,
+    required this.iconUrl,
+    required this.marketable,
+    this.price,
+    this.priceText,
+  });
+
+  final String assetId;
+  final int appId;
+  final String contextId;
+  final String classId;
+  final String instanceId;
+  final int amount;
+  final String name;
+  final String marketHashName;
+  final String iconUrl;
+  final bool marketable;
+  final double? price;
+  final String? priceText;
+
+  double? get totalPrice => price == null ? null : price! * amount;
+
+  InventoryItem copyWith({double? price, String? priceText}) => InventoryItem(
+    assetId: assetId,
+    appId: appId,
+    contextId: contextId,
+    classId: classId,
+    instanceId: instanceId,
+    amount: amount,
+    name: name,
+    marketHashName: marketHashName,
+    iconUrl: iconUrl,
+    marketable: marketable,
+    price: price ?? this.price,
+    priceText: priceText ?? this.priceText,
+  );
+}
+
+class InventorySnapshot {
+  const InventorySnapshot({
+    required this.items,
+    required this.currencyCode,
+    required this.totalValue,
+    required this.totalAssets,
+    required this.valuedAssets,
+    required this.updatedAt,
+    this.partial = false,
+  });
+
+  final List<InventoryItem> items;
+  final String currencyCode;
+  final double totalValue;
+  final int totalAssets;
+  final int valuedAssets;
+  final DateTime updatedAt;
+  final bool partial;
+}
+
+enum HistoryAction {
+  confirmationSeen,
+  accepted,
+  declined,
+  autoAccepted,
+  autoSkipped,
+  qrApproved,
+  authenticatorAdded,
+  backupCreated,
+  backupRestored,
+  error,
+}
+
+class ActionHistoryEntry {
+  const ActionHistoryEntry({
+    required this.id,
+    required this.timestamp,
+    required this.steamId,
+    required this.accountName,
+    required this.action,
+    required this.title,
+    this.details,
+    this.confirmationId,
+    this.success = true,
+  });
+
+  final String id;
+  final DateTime timestamp;
+  final int steamId;
+  final String accountName;
+  final HistoryAction action;
+  final String title;
+  final String? details;
+  final String? confirmationId;
+  final bool success;
+
+  factory ActionHistoryEntry.fromJson(Map<String, dynamic> json) =>
+      ActionHistoryEntry(
+        id: _asString(json['id']) ?? '',
+        timestamp:
+            DateTime.tryParse(_asString(json['timestamp']) ?? '')?.toLocal() ??
+            DateTime.fromMillisecondsSinceEpoch(0),
+        steamId: _asInt(json['steamId']),
+        accountName: _asString(json['accountName']) ?? 'Steam account',
+        action: HistoryAction.values.firstWhere(
+          (value) => value.name == _asString(json['action']),
+          orElse: () => HistoryAction.error,
+        ),
+        title: _asString(json['title']) ?? '',
+        details: _asString(json['details']),
+        confirmationId: _asString(json['confirmationId']),
+        success: json['success'] != false,
+      );
+
+  Map<String, dynamic> toJson() => <String, dynamic>{
+    'id': id,
+    'timestamp': timestamp.toUtc().toIso8601String(),
+    'steamId': steamId,
+    'accountName': accountName,
+    'action': action.name,
+    'title': title,
+    'details': details,
+    'confirmationId': confirmationId,
+    'success': success,
+  };
+}
+
+class QrChallenge {
+  const QrChallenge({required this.version, required this.clientId});
+
+  final int version;
+  final BigInt clientId;
+}
+
+class QrSessionInfo {
+  const QrSessionInfo({
+    required this.deviceName,
+    required this.ip,
+    required this.location,
+  });
+
+  final String deviceName;
+  final String ip;
+  final String location;
+}
+
+class LoginSession {
+  const LoginSession({
+    required this.clientId,
+    required this.requestId,
+    required this.steamId,
+    required this.intervalSeconds,
+    required this.guardTypes,
+  });
+
+  final String clientId;
+  final String requestId;
+  final int steamId;
+  final int intervalSeconds;
+  final List<int> guardTypes;
+}
+
+class LoginTokens {
+  const LoginTokens({
+    required this.steamId,
+    required this.accessToken,
+    required this.refreshToken,
+  });
+
+  final int steamId;
+  final String accessToken;
+  final String refreshToken;
+}
