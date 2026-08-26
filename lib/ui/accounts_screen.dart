@@ -293,7 +293,88 @@ class _AccountCard extends StatelessWidget {
                 ),
               ],
             ),
-            const Spacer(),
+            Expanded(
+              child: Center(
+                child: NeoPressable(
+                  onTap: () async {
+                    await Clipboard.setData(ClipboardData(text: code));
+                    HapticFeedback.mediumImpact();
+                    if (!context.mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text(strings.text('copied'))),
+                    );
+                  },
+                  semanticLabel: strings.text('tap_to_copy'),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: <Widget>[
+                      Row(
+                        crossAxisAlignment: CrossAxisAlignment.center,
+                        children: <Widget>[
+                          Expanded(
+                            child: AnimatedSwitcher(
+                              duration: const Duration(milliseconds: 380),
+                              switchInCurve: Curves.easeOutCubic,
+                              switchOutCurve: Curves.easeInCubic,
+                              transitionBuilder: (child, animation) =>
+                                  FadeTransition(
+                                    opacity: animation,
+                                    child: child,
+                                  ),
+                              child: FittedBox(
+                                key: ValueKey<String>(code),
+                                fit: BoxFit.scaleDown,
+                                alignment: Alignment.centerLeft,
+                                child: Text(
+                                  code,
+                                  style: Theme.of(context)
+                                      .textTheme
+                                      .displayMedium
+                                      ?.copyWith(
+                                        fontWeight: FontWeight.w700,
+                                        letterSpacing: 8,
+                                        fontFeatures: const <FontFeature>[
+                                          FontFeature.tabularFigures(),
+                                        ],
+                                      ),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 14),
+                          Text(
+                            remaining.ceil().toString(),
+                            style: Theme.of(context).textTheme.headlineSmall
+                                ?.copyWith(
+                                  color: remaining <= 5
+                                      ? NeoColors.danger
+                                      : scheme.onSurfaceVariant,
+                                  fontFeatures: const <FontFeature>[
+                                    FontFeature.tabularFigures(),
+                                  ],
+                                ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 14),
+                      ClipRRect(
+                        borderRadius: BorderRadius.circular(99),
+                        child: LinearProgressIndicator(
+                          value: (remaining / 30).clamp(0, 1),
+                          minHeight: 3,
+                          backgroundColor: scheme.outlineVariant,
+                          color: remaining <= 5
+                              ? NeoColors.danger
+                              : scheme.primary,
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+            const SizedBox(height: 12),
             Text(
               account.steamId == 0
                   ? account.accountName
@@ -303,73 +384,6 @@ class _AccountCard extends StatelessWidget {
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurfaceVariant,
                 letterSpacing: 0.5,
-              ),
-            ),
-            const SizedBox(height: 8),
-            NeoPressable(
-              onTap: () async {
-                await Clipboard.setData(ClipboardData(text: code));
-                HapticFeedback.mediumImpact();
-                if (!context.mounted) return;
-                ScaffoldMessenger.of(
-                  context,
-                ).showSnackBar(SnackBar(content: Text(strings.text('copied'))));
-              },
-              semanticLabel: strings.text('tap_to_copy'),
-              child: Row(
-                crossAxisAlignment: CrossAxisAlignment.end,
-                children: <Widget>[
-                  Expanded(
-                    child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 380),
-                      switchInCurve: Curves.easeOutCubic,
-                      switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) =>
-                          FadeTransition(opacity: animation, child: child),
-                      child: FittedBox(
-                        key: ValueKey<String>(code),
-                        fit: BoxFit.scaleDown,
-                        alignment: Alignment.centerLeft,
-                        child: Text(
-                          code,
-                          style: Theme.of(context).textTheme.displaySmall
-                              ?.copyWith(
-                                fontWeight: FontWeight.w700,
-                                letterSpacing: 7,
-                                fontFeatures: const <FontFeature>[
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  SizedBox(
-                    height: 34,
-                    child: Text(
-                      remaining.ceil().toString(),
-                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                        color: remaining <= 5
-                            ? NeoColors.danger
-                            : scheme.onSurfaceVariant,
-                        fontFeatures: const <FontFeature>[
-                          FontFeature.tabularFigures(),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 10),
-            ClipRRect(
-              borderRadius: BorderRadius.circular(99),
-              child: LinearProgressIndicator(
-                value: (remaining / 30).clamp(0, 1),
-                minHeight: 3,
-                backgroundColor: scheme.outlineVariant,
-                color: remaining <= 5 ? NeoColors.danger : scheme.primary,
               ),
             ),
           ],
