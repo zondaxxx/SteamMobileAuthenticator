@@ -51,4 +51,45 @@ void main() {
       expect(details.itemCount, 1);
     },
   );
+
+  test(
+    'public profile fallback parses nickname and avatar without a session',
+    () async {
+      final client = SteamClient(
+        client: MockClient((request) async {
+          expect(request.url.host, 'steamcommunity.com');
+          expect(request.url.path, '/profiles/76561198000000000/');
+          return http.Response(
+            '<profile><steamID64>76561198000000000</steamID64>'
+            '<steamID><![CDATA[Coolest &amp; Best]]></steamID>'
+            '<avatarIcon><![CDATA[http://avatars.example.com/icon.jpg]]></avatarIcon>'
+            '<avatarFull><![CDATA[http://avatars.example.com/full.jpg]]></avatarFull>'
+            '</profile>',
+            200,
+          );
+        }),
+      );
+
+      final profile = await client.fetchPublicProfile(76561198000000000);
+
+      expect(profile.personaName, 'Coolest & Best');
+      expect(profile.avatarUrl, 'https://avatars.example.com/full.jpg');
+    },
+  );
+
+  test('public profile fallback rejects a mismatched steamid page', () async {
+    final client = SteamClient(
+      client: MockClient(
+        (request) async => http.Response(
+          '<profile><steamID64>76561198000000001</steamID64></profile>',
+          200,
+        ),
+      ),
+    );
+
+    await expectLater(
+      client.fetchPublicProfile(76561198000000000),
+      throwsA(isA<SteamApiException>()),
+    );
+  });
 }

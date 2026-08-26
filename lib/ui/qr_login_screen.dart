@@ -1,9 +1,11 @@
+import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:mobile_scanner/mobile_scanner.dart';
 
 import '../app_controller.dart';
 import '../core/models.dart';
+import '../core/steam_auth_client.dart';
 import '../l10n.dart';
 import 'neo_design.dart';
 
@@ -22,12 +24,171 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
   );
   int _accountIndex = 0;
   bool _processing = false;
+  bool _torchOn = false;
   Object? _error;
+  String? _lastValue;
+  DateTime _lastValueAt = DateTime.fromMillisecondsSinceEpoch(0);
 
   @override
   void dispose() {
     _scanner.dispose();
     super.dispose();
+  }
+
+  Future<void> _toggleTorch() async {
+    try {
+      await _scanner.toggleTorch();
+      if (mounted) setState(() => _torchOn = !_torchOn);
+    } catch (_) {
+      // Torch is optional hardware; scanning keeps working without it.
+    }
+  }
+
+  Future<void> _scanFromGallery() async {
+    if (_processing) return;
+    final result = await FilePicker.pickFiles(type: FileType.image);
+    final path = result.isEmpty ? null : result.first.path;
+    if (path == null) return;
+    HapticFeedback.selectionClick();
+    try {
+      final capture = await _scanner.analyzeImage(
+        path,
+        formats: const <BarcodeFormat>[BarcodeFormat.qrCode],
+      );
+      final value = capture?.barcodes
+          .map((barcode) => barcode.rawValue)
+          .whereType<String>()
+          .firstOrNull;
+      if (!mounted) return;
+      if (value == null) {
+        setState(() => _error = const SteamAuthException('qr_invalid'));
+        return;
+      }
+      await _handle(value);
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    }
+  }
+
+  Future<void> _manual(List<SteamAccount> accounts) async {
+    final input = TextEditingController();
+    final value = await showDialog<String>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text(AppStrings.of(context).text('paste_link')),
+        content: TextField(
+          controller: input,
+          autofocus: true,
+          keyboardType: TextInputType.url,
+          decoration: const InputDecoration(hintText: 'https://s.team/q/1/…'),
+          onSubmitted: (value) => Navigator.pop(context, value),
+        ),
+        actions: <Widget>[
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: Text(AppStrings.of(context).text('cancel')),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.pop(context, input.text),
+            child: Text(AppStrings.of(context).text('continue')),
+          ),
+        ],
+      ),
+    );
+    input.dispose();
+    if (value?.trim().isNotEmpty == true && mounted) {
+      await _handle(value!.trim());
+    }
+  }
+
+  Future<void> _handle(String source) async {
+    if (_processing) return;
+    // The camera fires onDetect continuously for the same frame; ignore
+    // repeats of the same payload within a short window.
+    final now = DateTime.now();
+    if (source == _lastValue &&
+        now.difference(_lastValueAt) < const Duration(seconds: 4)) {
+      return;
+    }
+    _lastValue = source;
+    _lastValueAt = now;
+    HapticFeedback.mediumImpact();
+    setState(() {
+      _processing = true;
+      _error = null;
+    });
+    try {
+      await _scanner.stop();
+    } catch (_) {
+      // Stopping an already-stopped camera must not block the approval flow.
+    }
+    try {
+      final accounts = widget.controller.accounts
+          .where((account) => account.steamId != 0)
+          .toList(growable: false);
+      if (accounts.isEmpty) {
+        throw const SteamAuthException('session_required');
+      }
+      final challenge = widget.controller.parseQrChallenge(source);
+      final account = accounts[_accountIndex.clamp(0, accounts.length - 1)];
+      final info = await widget.controller.inspectQr(
+        account: account,
+        challenge: challenge,
+      );
+      if (!mounted) return;
+      final approved = await showDialog<bool>(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => PopScope(
+          canPop: false,
+          child: AlertDialog(
+            icon: const Icon(Icons.login_rounded),
+            title: Text(AppStrings.of(context).text('approve_login')),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: <Widget>[
+                Text(info.deviceName),
+                if (info.ip.isNotEmpty) Text('IP: ${info.ip}'),
+                if (info.location.isNotEmpty) Text(info.location),
+                const SizedBox(height: 12),
+                Text(AppStrings.of(context).text('qr_verify_warning')),
+              ],
+            ),
+            actions: <Widget>[
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: Text(AppStrings.of(context).text('cancel')),
+              ),
+              FilledButton.icon(
+                onPressed: () => Navigator.pop(context, true),
+                icon: const Icon(Icons.verified_user_outlined, size: 18),
+                label: Text(AppStrings.of(context).text('approve')),
+              ),
+            ],
+          ),
+        ),
+      );
+      if (approved != true) return;
+      await widget.controller.approveQr(account: account, challenge: challenge);
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text(AppStrings.of(context).text('qr_approved'))),
+      );
+      Navigator.pop(context);
+      return;
+    } catch (error) {
+      if (mounted) setState(() => _error = error);
+    } finally {
+      if (mounted) {
+        setState(() => _processing = false);
+        try {
+          await _scanner.start();
+        } catch (_) {
+          // Restarting may race with disposal; the widget rebuilds anyway.
+        }
+      }
+    }
   }
 
   @override
@@ -43,7 +204,7 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
           Padding(
             padding: const EdgeInsets.only(right: 12),
             child: NeoPill(
-              label: 'SECURE SCAN',
+              label: strings.text('qr_secure'),
               icon: Icons.shield_outlined,
               color: NeoColors.mint,
             ),
@@ -51,13 +212,33 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
         ],
       ),
       body: accounts.isEmpty
-          ? Center(child: Text(strings.text('qr_session_required')))
+          ? Center(
+              child: Padding(
+                padding: const EdgeInsets.all(28),
+                child: NeoSurface(
+                  accent: NeoColors.amber,
+                  padding: const EdgeInsets.all(24),
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    children: <Widget>[
+                      const Icon(
+                        Icons.key_off_outlined,
+                        size: 42,
+                        color: NeoColors.amber,
+                      ),
+                      const SizedBox(height: 14),
+                      Text(strings.text('qr_session_required')),
+                    ],
+                  ),
+                ),
+              ),
+            )
           : SafeArea(
               top: false,
               child: Column(
                 children: <Widget>[
                   Padding(
-                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+                    padding: const EdgeInsets.fromLTRB(16, 8, 16, 10),
                     child: DropdownButtonFormField<int>(
                       initialValue: _accountIndex.clamp(0, accounts.length - 1),
                       decoration: InputDecoration(
@@ -74,6 +255,7 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                                       .profiles[accounts[index].steamId]
                                       ?.personaName ??
                                   accounts[index].accountName,
+                              overflow: TextOverflow.ellipsis,
                             ),
                           ),
                       ],
@@ -87,10 +269,10 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                   ),
                   if (_error != null)
                     Padding(
-                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 12),
+                      padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
                       child: NeoSurface(
                         accent: NeoColors.danger,
-                        padding: const EdgeInsets.all(14),
+                        padding: const EdgeInsets.all(13),
                         child: Row(
                           children: <Widget>[
                             const Icon(
@@ -107,64 +289,53 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
                       child: ClipRRect(
-                        borderRadius: BorderRadius.circular(30),
+                        borderRadius: BorderRadius.circular(22),
                         child: DecoratedBox(
                           decoration: BoxDecoration(
                             color: Colors.black,
-                            border: Border.all(
-                              color: NeoColors.cyan.withValues(alpha: 0.28),
-                            ),
-                            borderRadius: BorderRadius.circular(30),
+                            borderRadius: BorderRadius.circular(22),
                           ),
                           child: Stack(
                             fit: StackFit.expand,
                             children: <Widget>[
                               MobileScanner(
                                 controller: _scanner,
+                                errorBuilder: (context, error) =>
+                                    _CameraError(error: error),
                                 onDetect: (capture) {
                                   final value = capture.barcodes
                                       .map((barcode) => barcode.rawValue)
                                       .whereType<String>()
                                       .firstOrNull;
-                                  if (value != null) _handle(value, accounts);
+                                  if (value != null) _handle(value);
                                 },
                               ),
-                              const ColoredBox(color: Color(0x1900060c)),
                               Center(
                                 child: IgnorePointer(
-                                  child: TweenAnimationBuilder<double>(
-                                    tween: Tween<double>(begin: 0.96, end: 1),
-                                    duration: const Duration(milliseconds: 900),
-                                    curve: Curves.easeOutBack,
-                                    builder: (context, value, child) =>
-                                        Transform.scale(
-                                          scale:
-                                              MediaQuery.of(context)
-                                                  .disableAnimations
-                                              ? 1
-                                              : value,
-                                          child: child,
-                                        ),
-                                    child: const _ScanFrame(),
+                                  child: CustomPaint(
+                                    painter: _ScanFramePainter(
+                                      color: Theme.of(context)
+                                          .colorScheme
+                                          .primary,
+                                    ),
+                                    child: const SizedBox.square(
+                                      dimension: 240,
+                                    ),
                                   ),
                                 ),
                               ),
                               AnimatedSwitcher(
-                                duration: const Duration(milliseconds: 250),
+                                duration: const Duration(milliseconds: 200),
                                 child: _processing
                                     ? ColoredBox(
-                                        key: const ValueKey<String>(
-                                          'processing',
-                                        ),
-                                        color: const Color(0x9900060c),
-                                        child: Center(
-                                          child: NeoSurface(
-                                            accent: NeoColors.cyan,
-                                            padding: const EdgeInsets.all(20),
-                                            child: const SizedBox.square(
-                                              dimension: 34,
-                                              child:
-                                                  CircularProgressIndicator(),
+                                        key: const ValueKey<String>('busy'),
+                                        color: const Color(0x99060b12),
+                                        child: const Center(
+                                          child: SizedBox.square(
+                                            dimension: 30,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: Colors.white,
                                             ),
                                           ),
                                         ),
@@ -180,30 +351,38 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 12, 16, 14),
                     child: NeoSurface(
-                      accent: NeoColors.cyan,
-                      radius: 20,
-                      padding: const EdgeInsets.fromLTRB(16, 12, 10, 12),
+                      radius: 18,
+                      padding: const EdgeInsets.fromLTRB(16, 11, 11, 11),
                       child: Row(
                         children: <Widget>[
-                          const Icon(
-                            Icons.qr_code_scanner_rounded,
-                            color: NeoColors.cyan,
-                          ),
-                          const SizedBox(width: 12),
                           Expanded(
                             child: Text(
                               strings.text('qr_help'),
                               style: Theme.of(context).textTheme.bodySmall,
                             ),
                           ),
-                          const SizedBox(width: 8),
+                          const SizedBox(width: 6),
+                          NeoIconButton(
+                            tooltip: strings.text('torch'),
+                            onPressed: _processing ? null : _toggleTorch,
+                            icon: _torchOn
+                                ? Icons.flash_on_rounded
+                                : Icons.flash_off_rounded,
+                            accent: _torchOn ? NeoColors.amber : null,
+                          ),
+                          NeoIconButton(
+                            tooltip: strings.text('scan_from_photo'),
+                            onPressed: _processing ? null : _scanFromGallery,
+                            icon: Icons.photo_outlined,
+                            accent: NeoColors.violet,
+                          ),
                           NeoIconButton(
                             tooltip: strings.text('paste_link'),
                             onPressed: _processing
                                 ? null
                                 : () => _manual(accounts),
                             icon: Icons.link_rounded,
-                            accent: NeoColors.violet,
+                            accent: NeoColors.cyan,
                           ),
                         ],
                       ),
@@ -214,135 +393,72 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
             ),
     );
   }
-
-  Future<void> _manual(List<SteamAccount> accounts) async {
-    final input = TextEditingController();
-    final value = await showDialog<String>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: Text(AppStrings.of(context).text('paste_link')),
-        content: TextField(
-          controller: input,
-          autofocus: true,
-          keyboardType: TextInputType.url,
-          decoration: const InputDecoration(hintText: 'https://s.team/q/…'),
-          onSubmitted: (value) => Navigator.pop(context, value),
-        ),
-        actions: <Widget>[
-          TextButton(
-            onPressed: () => Navigator.pop(context),
-            child: Text(AppStrings.of(context).text('cancel')),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.pop(context, input.text),
-            child: Text(AppStrings.of(context).text('continue')),
-          ),
-        ],
-      ),
-    );
-    input.dispose();
-    if (value?.isNotEmpty == true && mounted) await _handle(value!, accounts);
-  }
-
-  Future<void> _handle(String source, List<SteamAccount> accounts) async {
-    if (_processing) return;
-    HapticFeedback.mediumImpact();
-    setState(() {
-      _processing = true;
-      _error = null;
-    });
-    await _scanner.stop();
-    try {
-      final challenge = widget.controller.parseQrChallenge(source);
-      final account = accounts[_accountIndex.clamp(0, accounts.length - 1)];
-      final info = await widget.controller.inspectQr(
-        account: account,
-        challenge: challenge,
-      );
-      if (!mounted) return;
-      final approved = await showDialog<bool>(
-        context: context,
-        barrierDismissible: false,
-        builder: (context) => AlertDialog(
-          icon: const Icon(Icons.login_rounded),
-          title: Text(AppStrings.of(context).text('approve_login')),
-          content: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: <Widget>[
-              Text(
-                info.deviceName,
-                style: Theme.of(context).textTheme.titleMedium,
-              ),
-              if (info.ip.isNotEmpty) Text('IP: ${info.ip}'),
-              if (info.location.isNotEmpty) Text(info.location),
-              const SizedBox(height: 12),
-              Text(AppStrings.of(context).text('qr_verify_warning')),
-            ],
-          ),
-          actions: <Widget>[
-            TextButton(
-              onPressed: () => Navigator.pop(context, false),
-              child: Text(AppStrings.of(context).text('cancel')),
-            ),
-            FilledButton(
-              onPressed: () => Navigator.pop(context, true),
-              child: Text(AppStrings.of(context).text('approve')),
-            ),
-          ],
-        ),
-      );
-      if (approved == true) {
-        await widget.controller.approveQr(
-          account: account,
-          challenge: challenge,
-        );
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(AppStrings.of(context).text('qr_approved'))),
-        );
-        Navigator.pop(context);
-        return;
-      }
-    } catch (error) {
-      if (mounted) setState(() => _error = error);
-    } finally {
-      if (mounted) {
-        setState(() => _processing = false);
-        await _scanner.start();
-      }
-    }
-  }
 }
 
-class _ScanFrame extends StatelessWidget {
-  const _ScanFrame();
+class _CameraError extends StatelessWidget {
+  const _CameraError({required this.error});
+
+  final MobileScannerException error;
 
   @override
-  Widget build(BuildContext context) => SizedBox.square(
-    dimension: 248,
-    child: CustomPaint(painter: _ScanFramePainter()),
-  );
+  Widget build(BuildContext context) {
+    final strings = AppStrings.of(context);
+    final permissionDenied =
+        error.errorCode == MobileScannerErrorCode.permissionDenied;
+    return ColoredBox(
+      color: Theme.of(context).colorScheme.surface,
+      child: Center(
+        child: Padding(
+          padding: const EdgeInsets.all(26),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: <Widget>[
+              Icon(
+                permissionDenied
+                    ? Icons.no_photography_outlined
+                    : Icons.camera_alt_outlined,
+                size: 40,
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
+              ),
+              const SizedBox(height: 12),
+              Text(
+                strings.text(
+                  permissionDenied ? 'camera_denied' : 'camera_error',
+                ),
+                textAlign: TextAlign.center,
+                style: Theme.of(context).textTheme.bodyMedium,
+              ),
+              if (permissionDenied) ...<Widget>[
+                const SizedBox(height: 10),
+                Text(
+                  strings.text('camera_denied_hint'),
+                  textAlign: TextAlign.center,
+                  style: Theme.of(context).textTheme.bodySmall,
+                ),
+              ],
+            ],
+          ),
+        ),
+      ),
+    );
+  }
 }
 
 class _ScanFramePainter extends CustomPainter {
+  const _ScanFramePainter({required this.color});
+
+  final Color color;
+
   @override
   void paint(Canvas canvas, Size size) {
-    final glow = Paint()
-      ..color = NeoColors.cyan.withValues(alpha: 0.23)
-      ..style = PaintingStyle.stroke
-      ..strokeWidth = 10
-      ..maskFilter = const MaskFilter.blur(BlurStyle.normal, 10);
     final line = Paint()
-      ..shader = const LinearGradient(
-        colors: <Color>[NeoColors.cyan, NeoColors.blue],
-      ).createShader(Offset.zero & size)
+      ..color = color.withValues(alpha: 0.9)
       ..style = PaintingStyle.stroke
-      ..strokeWidth = 4
+      ..strokeWidth = 3.5
       ..strokeCap = StrokeCap.round;
     final path = Path();
-    const arm = 48.0;
-    const radius = 18.0;
+    const arm = 44.0;
+    const radius = 16.0;
     path
       ..moveTo(0, arm)
       ..lineTo(0, radius)
@@ -365,11 +481,10 @@ class _ScanFramePainter extends CustomPainter {
       ..lineTo(radius, size.height)
       ..quadraticBezierTo(0, size.height, 0, size.height - radius)
       ..lineTo(0, size.height - arm);
-    canvas
-      ..drawPath(path, glow)
-      ..drawPath(path, line);
+    canvas.drawPath(path, line);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _ScanFramePainter oldDelegate) =>
+      oldDelegate.color != color;
 }

@@ -8,9 +8,13 @@ int _asInt(Object? value) {
 
 String? _asString(Object? value) {
   if (value == null) return null;
-  final result = value.toString();
+  final result = value.toString().trim();
   return result.isEmpty ? null : result;
 }
+
+/// SDA maFiles produced by different tools sometimes carry stray whitespace or
+/// line breaks inside base64 secrets, which makes base64Decode throw later.
+String _asSecret(Object? value) => (value?.toString() ?? '').trim();
 
 class SteamSession {
   const SteamSession({
@@ -104,14 +108,16 @@ class SteamAccount {
     final session = sessionJson is Map
         ? SteamSession.fromJson(Map<String, dynamic>.from(sessionJson))
         : const SteamSession(steamId: 0);
-    final secret = _asString(json['shared_secret']);
-    if (secret == null) {
+    final secret = _asSecret(json['shared_secret']);
+    if (secret.isEmpty) {
       throw const FormatException('maFile does not contain shared_secret');
     }
     final accountName = _asString(json['account_name']);
     return SteamAccount(
       sharedSecret: secret,
-      identitySecret: _asString(json['identity_secret']),
+      identitySecret: _asSecret(json['identity_secret']).isEmpty
+          ? null
+          : _asSecret(json['identity_secret']),
       accountName:
           accountName ??
           (session.steamId == 0 ? 'Steam account' : session.steamId.toString()),
@@ -139,6 +145,31 @@ class SteamAccount {
       accountName: accountName,
       deviceId: deviceId,
       session: nextSession,
+      raw: nextRaw,
+    );
+  }
+
+  /// Last profile data seen for this account, used to render the nickname and
+  /// avatar instantly and while no fresh Steam session is available.
+  SteamProfile? get cachedProfile {
+    final cached = raw['cached_profile'];
+    if (cached is! Map) return null;
+    try {
+      return SteamProfile.fromJson(Map<String, dynamic>.from(cached));
+    } on Exception {
+      return null;
+    }
+  }
+
+  SteamAccount withCachedProfile(SteamProfile profile) {
+    final nextRaw = Map<String, dynamic>.from(raw)
+      ..['cached_profile'] = profile.toJson();
+    return SteamAccount(
+      sharedSecret: sharedSecret,
+      identitySecret: identitySecret,
+      accountName: accountName,
+      deviceId: deviceId,
+      session: session,
       raw: nextRaw,
     );
   }

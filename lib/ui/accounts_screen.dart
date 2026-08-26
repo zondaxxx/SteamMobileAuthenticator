@@ -336,33 +336,19 @@ class _AccountCard extends StatelessWidget {
                 Hero(
                   tag: 'steam-avatar-${account.steamId}-${account.accountName}',
                   child: Container(
-                    width: 58,
-                    height: 58,
+                    width: 56,
+                    height: 56,
                     padding: const EdgeInsets.all(2),
                     decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: <Color>[accent, NeoColors.cyan],
-                      ),
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: <BoxShadow>[
-                        BoxShadow(
-                          color: accent.withValues(alpha: 0.25),
-                          blurRadius: 20,
-                        ),
-                      ],
-                    ),
-                    child: ClipRRect(
                       borderRadius: BorderRadius.circular(18),
-                      child: ColoredBox(
-                        color: scheme.surface,
-                        child: profile?.avatarUrl?.isNotEmpty == true
-                            ? Image.network(
-                                profile!.avatarUrl!,
-                                fit: BoxFit.cover,
-                                errorBuilder: (_, _, _) => _initial(),
-                              )
-                            : _initial(),
-                      ),
+                      border: Border.all(color: accent.withValues(alpha: 0.5)),
+                    ),
+                    child: NeoAvatar(
+                      name: profile?.personaName ?? account.accountName,
+                      url: profile?.avatarUrl,
+                      size: 50,
+                      radius: 14,
+                      accent: accent,
                     ),
                   ),
                 ),
@@ -509,14 +495,6 @@ class _AccountCard extends StatelessWidget {
     );
   }
 
-  Widget _initial() => Center(
-    child: Text(
-      (profile?.personaName ?? account.accountName).characters.first
-          .toUpperCase(),
-      style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w800),
-    ),
-  );
-
   IconData _healthIcon(SessionHealth value) => switch (value) {
     SessionHealth.healthy => Icons.cloud_done_outlined,
     SessionHealth.refreshable => Icons.sync_rounded,
@@ -596,24 +574,19 @@ class _EmptyAccounts extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             children: <Widget>[
               Container(
-                width: 76,
-                height: 76,
+                width: 72,
+                height: 72,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                  color: NeoColors.cyan.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: NeoColors.cyan.withValues(alpha: 0.3),
                   ),
-                  borderRadius: BorderRadius.circular(25),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: NeoColors.blue.withValues(alpha: 0.28),
-                      blurRadius: 28,
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.shield_outlined,
-                  size: 38,
-                  color: Colors.white,
+                  size: 34,
+                  color: NeoColors.cyan,
                 ),
               ),
               const SizedBox(height: 22),

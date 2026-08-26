@@ -28,15 +28,16 @@ class HistoryScreen extends StatelessWidget {
                   width: 70,
                   height: 70,
                   decoration: BoxDecoration(
-                    gradient: const LinearGradient(
-                      colors: <Color>[NeoColors.cyan, NeoColors.blue],
+                    color: NeoColors.cyan.withValues(alpha: 0.12),
+                    borderRadius: BorderRadius.circular(22),
+                    border: Border.all(
+                      color: NeoColors.cyan.withValues(alpha: 0.3),
                     ),
-                    borderRadius: BorderRadius.circular(23),
                   ),
                   child: const Icon(
                     Icons.history_toggle_off_rounded,
-                    color: Colors.white,
-                    size: 36,
+                    color: NeoColors.cyan,
+                    size: 34,
                   ),
                 ),
                 const SizedBox(height: 18),
@@ -111,12 +112,6 @@ class HistoryScreen extends StatelessWidget {
                             decoration: BoxDecoration(
                               color: accent,
                               shape: BoxShape.circle,
-                              boxShadow: <BoxShadow>[
-                                BoxShadow(
-                                  color: accent.withValues(alpha: 0.5),
-                                  blurRadius: 8,
-                                ),
-                              ],
                             ),
                           ),
                         ],

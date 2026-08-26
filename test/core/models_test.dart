@@ -35,4 +35,39 @@ void main() {
       throwsFormatException,
     );
   });
+
+  test('base64 secrets are normalized from messy maFiles', () {
+    final account = SteamAccount.fromJson(<String, dynamic>{
+      'shared_secret': ' AQIDBA==\n',
+      'identity_secret': ' BQYHCA== ',
+      'account_name': 'tester',
+      'Session': <String, dynamic>{'SteamID': 76561198000000000},
+    });
+
+    expect(account.sharedSecret, 'AQIDBA==');
+    expect(account.identitySecret, 'BQYHCA==');
+    expect(() => base64Decode(account.sharedSecret), returnsNormally);
+  });
+
+  test('cached profile survives a round trip through the vault JSON', () {
+    const profile = SteamProfile(
+      steamId: 76561198000000000,
+      personaName: 'Tester',
+      avatarUrl: 'https://avatars.example.com/full.jpg',
+    );
+    final account = SteamAccount.fromJson(<String, dynamic>{
+      'shared_secret': 'AQIDBA==',
+      'account_name': 'tester',
+      'Session': <String, dynamic>{'SteamID': 76561198000000000},
+    }).withCachedProfile(profile);
+
+    final restored = SteamAccount.fromJsonString(account.toJsonString());
+
+    expect(restored.cachedProfile?.personaName, 'Tester');
+    expect(
+      restored.cachedProfile?.avatarUrl,
+      'https://avatars.example.com/full.jpg',
+    );
+    expect(restored.cachedProfile?.steamId, 76561198000000000);
+  });
 }

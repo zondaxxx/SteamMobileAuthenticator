@@ -35,7 +35,9 @@ class BackupService {
 
   static const format = 'SteamMobileAuthenticatorBackup';
   static const version = 1;
-  static const iterations = 250000;
+  // OWASP 2024 guidance for PBKDF2-HMAC-SHA256. Older backups remain
+  // readable: the iteration count is stored inside the envelope.
+  static const iterations = 600000;
 
   Future<Uint8List> encrypt({
     required List<SteamAccount> accounts,

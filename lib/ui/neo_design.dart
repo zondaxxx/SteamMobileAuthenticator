@@ -1,99 +1,109 @@
-import 'dart:math' as math;
-
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+/// Calm, Steam-inspired visual language: deep charcoal-blue surfaces,
+/// one restrained accent family, hairline borders and almost no glow.
 abstract final class NeoColors {
-  static const darkBackground = Color(0xff000000);
-  static const darkBackgroundEnd = Color(0xff000000);
-  static const darkPanel = Color(0xff04070a);
-  static const darkPanelHigh = Color(0xff091018);
-  static const darkBorder = Color(0xff173149);
-  static const blue = Color(0xff43a9ff);
-  static const cyan = Color(0xff5de4ff);
-  static const violet = Color(0xff8d7dff);
-  static const mint = Color(0xff54e0b0);
-  static const amber = Color(0xffffc45c);
-  static const danger = Color(0xffff6b7d);
+  // Dark palette.
+  static const darkBackground = Color(0xff0c0f14);
+  static const darkBackgroundEnd = Color(0xff10141b);
+  static const darkPanel = Color(0xff151b24);
+  static const darkPanelHigh = Color(0xff1c2431);
+  static const darkBorder = Color(0xff27303d);
 
-  static const lightBackground = Color(0xffedf5fc);
-  static const lightBackgroundEnd = Color(0xffdfeef9);
-  static const lightPanel = Color(0xfff8fbff);
+  // Accents.
+  static const blue = Color(0xff58a6e8);
+  static const cyan = Color(0xff41c8ad);
+  static const violet = Color(0xff9089e8);
+  static const mint = Color(0xff4ecf96);
+  static const amber = Color(0xffe5b566);
+  static const danger = Color(0xffe26370);
+
+  // Light palette.
+  static const lightBackground = Color(0xfff2f5f9);
+  static const lightBackgroundEnd = Color(0xffeaeff6);
+  static const lightPanel = Color(0xffffffff);
   static const lightPanelHigh = Color(0xffffffff);
-  static const lightBorder = Color(0xffc9dbea);
+  static const lightBorder = Color(0xffd9e0ea);
+
+  /// Deterministic accent for generated placeholders (avatars, chips).
+  static Color forSeed(String seed) {
+    var hash = 0;
+    for (final code in seed.codeUnits) {
+      hash = (hash * 31 + code) & 0x7fffffff;
+    }
+    return const <Color>[blue, cyan, violet, mint, amber][hash % 5];
+  }
 }
 
 ThemeData steamNeoTheme(Brightness brightness) {
   final dark = brightness == Brightness.dark;
   final scheme = ColorScheme(
     brightness: brightness,
-    primary: dark ? NeoColors.blue : const Color(0xff0877cc),
+    primary: dark ? NeoColors.blue : const Color(0xff2b6cb0),
     onPrimary: Colors.white,
-    primaryContainer: dark ? const Color(0xff123b60) : const Color(0xffd4ebff),
+    primaryContainer: dark ? const Color(0xff1d3348) : const Color(0xffd8eaf9),
     onPrimaryContainer: dark
-        ? const Color(0xffd9eeff)
-        : const Color(0xff062f50),
-    secondary: dark ? NeoColors.cyan : const Color(0xff007d95),
-    onSecondary: dark ? const Color(0xff00252c) : Colors.white,
+        ? const Color(0xffcfe6fa)
+        : const Color(0xff12395c),
+    secondary: dark ? NeoColors.cyan : const Color(0xff17735f),
+    onSecondary: Colors.white,
     secondaryContainer: dark
-        ? const Color(0xff123946)
-        : const Color(0xffc6f2fb),
+        ? const Color(0xff17352e)
+        : const Color(0xffd3efe5),
     onSecondaryContainer: dark
-        ? const Color(0xffd4f8ff)
-        : const Color(0xff003640),
-    tertiary: dark ? NeoColors.violet : const Color(0xff6752d7),
+        ? const Color(0xffc8ecdf)
+        : const Color(0xff0c3d30),
+    tertiary: dark ? NeoColors.violet : const Color(0xff5c53b8),
     onTertiary: Colors.white,
-    tertiaryContainer: dark ? const Color(0xff2d2852) : const Color(0xffe8e2ff),
+    tertiaryContainer: dark ? const Color(0xff2c2949) : const Color(0xffe5e2f8),
     onTertiaryContainer: dark
-        ? const Color(0xffece8ff)
-        : const Color(0xff281866),
-    error: dark ? NeoColors.danger : const Color(0xffba1a34),
+        ? const Color(0xffded9f8)
+        : const Color(0xff241f57),
+    error: dark ? NeoColors.danger : const Color(0xffb3261e),
     onError: Colors.white,
-    errorContainer: dark ? const Color(0xff421d29) : const Color(0xffffd9df),
-    onErrorContainer: dark ? const Color(0xffffd9df) : const Color(0xff40000d),
+    errorContainer: dark ? const Color(0xff3f2026) : const Color(0xffffdad6),
+    onErrorContainer: dark ? const Color(0xffffdad6) : const Color(0xff410e0b),
     surface: dark ? NeoColors.darkPanel : NeoColors.lightPanel,
-    onSurface: dark ? const Color(0xfff0f6ff) : const Color(0xff142435),
+    onSurface: dark ? const Color(0xffe6ebf2) : const Color(0xff182130),
     surfaceContainerHighest: dark
         ? NeoColors.darkPanelHigh
-        : const Color(0xffe3eef7),
-    onSurfaceVariant: dark ? const Color(0xff98abc0) : const Color(0xff506477),
+        : const Color(0xffe6ebf2),
+    onSurfaceVariant: dark ? const Color(0xff93a0b4) : const Color(0xff56637a),
     outline: dark ? NeoColors.darkBorder : NeoColors.lightBorder,
-    outlineVariant: dark ? const Color(0xff182d43) : const Color(0xffd5e3ee),
+    outlineVariant: dark ? const Color(0xff1f2733) : const Color(0xffe3e9f1),
     shadow: Colors.black,
     scrim: Colors.black,
-    inverseSurface: dark ? const Color(0xffedf5ff) : const Color(0xff172637),
-    onInverseSurface: dark ? const Color(0xff172637) : Colors.white,
-    inversePrimary: dark ? const Color(0xff0069b8) : const Color(0xff8bccff),
+    inverseSurface: dark ? const Color(0xffe6ebf2) : const Color(0xff2a3442),
+    onInverseSurface: dark ? const Color(0xff1a212c) : Colors.white,
+    inversePrimary: dark ? const Color(0xff2b6cb0) : const Color(0xff9ccbf2),
   );
   final baseText = ThemeData(brightness: brightness).textTheme
       .apply(bodyColor: scheme.onSurface, displayColor: scheme.onSurface);
   final textTheme = baseText.copyWith(
     displaySmall: baseText.displaySmall?.copyWith(
-      fontWeight: FontWeight.w800,
-      letterSpacing: -1,
-    ),
-    headlineLarge: baseText.headlineLarge?.copyWith(
-      fontWeight: FontWeight.w800,
+      fontWeight: FontWeight.w700,
       letterSpacing: -0.8,
     ),
+    headlineLarge: baseText.headlineLarge?.copyWith(
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.6,
+    ),
     headlineMedium: baseText.headlineMedium?.copyWith(
-      fontWeight: FontWeight.w800,
-      letterSpacing: -0.5,
+      fontWeight: FontWeight.w700,
+      letterSpacing: -0.4,
     ),
     headlineSmall: baseText.headlineSmall?.copyWith(
-      fontWeight: FontWeight.w700,
-      letterSpacing: -0.35,
-    ),
-    titleLarge: baseText.titleLarge?.copyWith(
-      fontWeight: FontWeight.w700,
+      fontWeight: FontWeight.w600,
       letterSpacing: -0.2,
     ),
-    titleMedium: baseText.titleMedium?.copyWith(fontWeight: FontWeight.w700),
-    labelLarge: baseText.labelLarge?.copyWith(
-      fontWeight: FontWeight.w700,
-      letterSpacing: 0.2,
+    titleLarge: baseText.titleLarge?.copyWith(fontWeight: FontWeight.w600),
+    titleMedium: baseText.titleMedium?.copyWith(
+      fontWeight: FontWeight.w600,
+      letterSpacing: -0.1,
     ),
+    labelLarge: baseText.labelLarge?.copyWith(fontWeight: FontWeight.w600),
   );
   return ThemeData(
     useMaterial3: true,
@@ -115,110 +125,106 @@ ThemeData steamNeoTheme(Brightness brightness) {
     cardTheme: CardThemeData(
       elevation: 0,
       margin: EdgeInsets.zero,
-      color: dark
-          ? NeoColors.darkPanel.withValues(alpha: 0.92)
-          : NeoColors.lightPanel.withValues(alpha: 0.92),
+      color: scheme.surface,
       surfaceTintColor: Colors.transparent,
-      shadowColor: Colors.black.withValues(alpha: 0.22),
       shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(24),
-        side: BorderSide(color: scheme.outline.withValues(alpha: 0.7)),
+        borderRadius: BorderRadius.circular(18),
+        side: BorderSide(color: scheme.outline.withValues(alpha: 0.55)),
       ),
     ),
     dividerTheme: DividerThemeData(
-      color: scheme.outlineVariant.withValues(alpha: 0.8),
+      color: scheme.outlineVariant,
       thickness: 1,
+      space: 1,
     ),
     inputDecorationTheme: InputDecorationTheme(
       filled: true,
       fillColor: dark
-          ? NeoColors.darkPanelHigh.withValues(alpha: 0.72)
-          : Colors.white.withValues(alpha: 0.72),
-      contentPadding: const EdgeInsets.symmetric(horizontal: 18, vertical: 17),
+          ? NeoColors.darkBackground.withValues(alpha: 0.65)
+          : Colors.white.withValues(alpha: 0.85),
+      contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 15),
       labelStyle: TextStyle(color: scheme.onSurfaceVariant),
       hintStyle: TextStyle(color: scheme.onSurfaceVariant),
-      prefixIconColor: scheme.primary,
+      prefixIconColor: scheme.onSurfaceVariant,
       border: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
+        borderRadius: BorderRadius.circular(14),
         borderSide: BorderSide(color: scheme.outline),
       ),
       enabledBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: scheme.outline.withValues(alpha: 0.75)),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: scheme.outline),
       ),
       focusedBorder: OutlineInputBorder(
-        borderRadius: BorderRadius.circular(18),
-        borderSide: BorderSide(color: scheme.primary, width: 1.6),
+        borderRadius: BorderRadius.circular(14),
+        borderSide: BorderSide(color: scheme.primary, width: 1.4),
       ),
     ),
     filledButtonTheme: FilledButtonThemeData(
       style: FilledButton.styleFrom(
-        minimumSize: const Size(48, 50),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: textTheme.labelLarge,
       ),
     ),
     outlinedButtonTheme: OutlinedButtonThemeData(
       style: OutlinedButton.styleFrom(
-        minimumSize: const Size(48, 50),
-        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+        minimumSize: const Size(48, 48),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 13),
         side: BorderSide(color: scheme.outline),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(17)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
         textStyle: textTheme.labelLarge,
+        foregroundColor: scheme.onSurface,
       ),
     ),
     textButtonTheme: TextButtonThemeData(
       style: TextButton.styleFrom(
         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         textStyle: textTheme.labelLarge,
       ),
     ),
     iconButtonTheme: IconButtonThemeData(
       style: IconButton.styleFrom(
-        minimumSize: const Size.square(46),
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+        minimumSize: const Size.square(44),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
       ),
     ),
     popupMenuTheme: PopupMenuThemeData(
-      color: dark ? const Color(0xff050a10) : Colors.white,
+      color: dark ? NeoColors.darkPanelHigh : Colors.white,
       surfaceTintColor: Colors.transparent,
-      elevation: 16,
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      elevation: 12,
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
     ),
     dialogTheme: DialogThemeData(
-      elevation: 24,
-      backgroundColor: dark ? const Color(0xff030609) : const Color(0xfff8fbff),
+      elevation: 16,
+      backgroundColor: dark ? NeoColors.darkPanel : Colors.white,
       surfaceTintColor: Colors.transparent,
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(28),
-        side: BorderSide(color: scheme.outline),
-      ),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(22)),
     ),
     snackBarTheme: SnackBarThemeData(
       behavior: SnackBarBehavior.floating,
-      elevation: 16,
-      backgroundColor: dark ? const Color(0xff071522) : const Color(0xff163a58),
+      elevation: 8,
+      backgroundColor: dark ? NeoColors.darkPanelHigh : const Color(0xff233247),
       contentTextStyle: const TextStyle(color: Colors.white),
-      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
       insetPadding: const EdgeInsets.fromLTRB(16, 0, 16, 18),
     ),
     progressIndicatorTheme: ProgressIndicatorThemeData(
       color: scheme.primary,
       linearTrackColor: scheme.surfaceContainerHighest,
       circularTrackColor: scheme.surfaceContainerHighest,
-      linearMinHeight: 5,
+      linearMinHeight: 4,
     ),
     switchTheme: SwitchThemeData(
       trackColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
-            ? scheme.primary.withValues(alpha: 0.52)
+            ? scheme.primary
             : scheme.surfaceContainerHighest,
       ),
       thumbColor: WidgetStateProperty.resolveWith(
         (states) => states.contains(WidgetState.selected)
-            ? scheme.secondary
+            ? scheme.onPrimary
             : scheme.onSurfaceVariant,
       ),
     ),
@@ -231,68 +237,21 @@ ThemeData steamNeoTheme(Brightness brightness) {
   );
 }
 
-class NeoBackground extends StatefulWidget {
+/// Static, battery-friendly backdrop: a soft vertical gradient and faint
+/// corner washes. No animation loop.
+class NeoBackground extends StatelessWidget {
   const NeoBackground({super.key, required this.child});
 
   final Widget child;
 
   @override
-  State<NeoBackground> createState() => _NeoBackgroundState();
-}
-
-class _NeoBackgroundState extends State<NeoBackground>
-    with SingleTickerProviderStateMixin {
-  late final AnimationController _controller;
-
-  @override
-  void initState() {
-    super.initState();
-    _controller = AnimationController(
-      vsync: this,
-      duration: const Duration(seconds: 18),
-    )..repeat(reverse: true);
-  }
-
-  @override
-  void dispose() {
-    _controller.dispose();
-    super.dispose();
-  }
-
-  @override
   Widget build(BuildContext context) {
-    final reduceMotion =
-        MediaQuery.maybeOf(context)?.disableAnimations ?? false;
-    return RepaintBoundary(
-      child: AnimatedBuilder(
-        animation: _controller,
-        builder: (context, _) => CustomPaint(
-          painter: _NeoBackgroundPainter(
-            dark: Theme.of(context).brightness == Brightness.dark,
-            progress: reduceMotion ? 0.35 : _controller.value,
-          ),
-          child: widget.child,
-        ),
-      ),
-    );
-  }
-}
-
-class _NeoBackgroundPainter extends CustomPainter {
-  const _NeoBackgroundPainter({required this.dark, required this.progress});
-
-  final bool dark;
-  final double progress;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final rect = Offset.zero & size;
-    canvas.drawRect(
-      rect,
-      Paint()
-        ..shader = LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
+    final dark = Theme.of(context).brightness == Brightness.dark;
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
           colors: dark
               ? const <Color>[
                   NeoColors.darkBackground,
@@ -302,51 +261,62 @@ class _NeoBackgroundPainter extends CustomPainter {
                   NeoColors.lightBackground,
                   NeoColors.lightBackgroundEnd,
                 ],
-        ).createShader(rect),
-    );
-    final shift = math.sin(progress * math.pi * 2);
-    _orb(
-      canvas,
-      Offset(size.width * (0.78 + shift * 0.05), size.height * 0.08),
-      size.shortestSide * 0.72,
-      (dark ? NeoColors.blue : const Color(0xff65b9f2)).withValues(
-        alpha: dark ? 0.055 : 0.2,
+        ),
       ),
-    );
-    _orb(
-      canvas,
-      Offset(size.width * (0.12 - shift * 0.04), size.height * 0.68),
-      size.shortestSide * 0.62,
-      (dark ? NeoColors.violet : const Color(0xffa79bf5)).withValues(
-        alpha: dark ? 0.03 : 0.13,
+      child: CustomPaint(
+        painter: _NeoWashPainter(dark: dark),
+        child: child,
       ),
     );
   }
+}
 
-  void _orb(Canvas canvas, Offset center, double radius, Color color) {
-    final bounds = Rect.fromCircle(center: center, radius: radius);
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..shader = RadialGradient(
-          colors: <Color>[color, color.withValues(alpha: 0)],
-        ).createShader(bounds),
+class _NeoWashPainter extends CustomPainter {
+  const _NeoWashPainter({required this.dark});
+
+  final bool dark;
+
+  @override
+  void paint(Canvas canvas, Size size) {
+    void wash(Color color, Offset center, double radius) {
+      canvas.drawCircle(
+        center,
+        radius,
+        Paint()
+          ..shader = RadialGradient(
+            colors: <Color>[color, color.withValues(alpha: 0)],
+          ).createShader(Rect.fromCircle(center: center, radius: radius)),
+      );
+    }
+
+    wash(
+      (dark ? NeoColors.blue : const Color(0xff9dc8ee)).withValues(
+        alpha: dark ? 0.05 : 0.28,
+      ),
+      Offset(size.width * 0.92, -size.height * 0.04),
+      size.shortestSide * 0.7,
+    );
+    wash(
+      (dark ? NeoColors.cyan : const Color(0xffb5e6d5)).withValues(
+        alpha: dark ? 0.03 : 0.22,
+      ),
+      Offset(size.width * 0.05, size.height * 0.96),
+      size.shortestSide * 0.55,
     );
   }
 
   @override
-  bool shouldRepaint(_NeoBackgroundPainter oldDelegate) =>
-      oldDelegate.dark != dark || oldDelegate.progress != progress;
+  bool shouldRepaint(_NeoWashPainter oldDelegate) => oldDelegate.dark != dark;
 }
 
+/// Solid panel with a hairline border. No gradients, no heavy shadows.
 class NeoSurface extends StatelessWidget {
   const NeoSurface({
     super.key,
     required this.child,
     this.padding,
     this.margin,
-    this.radius = 24,
+    this.radius = 18,
     this.accent,
     this.onTap,
     this.semanticLabel,
@@ -369,34 +339,24 @@ class NeoSurface extends StatelessWidget {
       margin: margin,
       padding: padding,
       decoration: BoxDecoration(
-        gradient: LinearGradient(
-          begin: Alignment.topLeft,
-          end: Alignment.bottomRight,
-          colors: dark
-              ? <Color>[
-                  Color.lerp(NeoColors.darkPanelHigh, effectiveAccent, 0.032)!,
-                  NeoColors.darkPanel.withValues(alpha: 0.985),
-                ]
-              : <Color>[
-                  Colors.white.withValues(alpha: 0.96),
-                  Color.lerp(NeoColors.lightPanel, effectiveAccent, 0.045)!,
-                ],
-        ),
+        color: theme.colorScheme.surface,
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(
           color: Color.lerp(
             theme.colorScheme.outline,
             effectiveAccent,
-            0.16,
-          )!.withValues(alpha: dark ? 0.78 : 0.62),
+            0.22,
+          )!.withValues(alpha: dark ? 0.85 : 0.65),
         ),
-        boxShadow: <BoxShadow>[
-          BoxShadow(
-            color: Colors.black.withValues(alpha: dark ? 0.24 : 0.08),
-            blurRadius: 30,
-            offset: const Offset(0, 14),
-          ),
-        ],
+        boxShadow: dark
+            ? null
+            : <BoxShadow>[
+                BoxShadow(
+                  color: Colors.black.withValues(alpha: 0.05),
+                  blurRadius: 10,
+                  offset: const Offset(0, 3),
+                ),
+              ],
       ),
       child: child,
     );
@@ -409,6 +369,83 @@ class NeoSurface extends StatelessWidget {
   }
 }
 
+/// Rounded profile avatar with fade-in loading and letter fallback.
+class NeoAvatar extends StatelessWidget {
+  const NeoAvatar({
+    super.key,
+    required this.name,
+    required this.size,
+    required this.accent,
+    required this.radius,
+    this.url,
+  });
+
+  final String name;
+  final String? url;
+  final double size;
+  final double radius;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final hasUrl = url != null && url!.startsWith('http');
+    return ClipRRect(
+      borderRadius: BorderRadius.circular(radius),
+      child: SizedBox.square(
+        dimension: size,
+        child: Stack(
+          fit: StackFit.expand,
+          children: <Widget>[
+            _Fallback(name: name, accent: accent),
+            if (hasUrl)
+              Image.network(
+                url!,
+                fit: BoxFit.cover,
+                filterQuality: FilterQuality.medium,
+                frameBuilder: (context, child, frame, wasSync) {
+                  if (wasSync) return child;
+                  return AnimatedOpacity(
+                    opacity: frame == null ? 0 : 1,
+                    duration: const Duration(milliseconds: 240),
+                    curve: Curves.easeOutCubic,
+                    child: child,
+                  );
+                },
+                errorBuilder: (_, _, _) =>
+                    _Fallback(name: name, accent: accent),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _Fallback extends StatelessWidget {
+  const _Fallback({required this.name, required this.accent});
+
+  final String name;
+  final Color accent;
+
+  @override
+  Widget build(BuildContext context) {
+    final letter = name.characters.firstOrNull?.toUpperCase() ?? '?';
+    return ColoredBox(
+      color: accent.withValues(alpha: 0.16),
+      child: Center(
+        child: Text(
+          letter,
+          style: TextStyle(
+            fontSize: 20,
+            fontWeight: FontWeight.w700,
+            color: accent,
+          ),
+        ),
+      ),
+    );
+  }
+}
+
 class NeoPressable extends StatefulWidget {
   const NeoPressable({
     super.key,
@@ -416,7 +453,7 @@ class NeoPressable extends StatefulWidget {
     required this.onTap,
     this.semanticLabel,
     this.haptic = false,
-    this.scale = 0.975,
+    this.scale = 0.98,
     this.enabled = true,
   });
 
@@ -454,7 +491,7 @@ class _NeoPressableState extends State<NeoPressable> {
           : null,
       child: AnimatedScale(
         scale: _pressed ? widget.scale : 1,
-        duration: const Duration(milliseconds: 130),
+        duration: const Duration(milliseconds: 120),
         curve: Curves.easeOutCubic,
         child: widget.child,
       ),
@@ -490,14 +527,14 @@ class NeoIconButton extends StatelessWidget {
           haptic: enabled,
           enabled: enabled,
           child: Container(
-            width: 46,
-            height: 46,
+            width: 44,
+            height: 44,
             decoration: BoxDecoration(
-              color: color.withValues(alpha: 0.1),
-              borderRadius: BorderRadius.circular(16),
-              border: Border.all(color: color.withValues(alpha: 0.22)),
+              color: color.withValues(alpha: 0.09),
+              borderRadius: BorderRadius.circular(13),
+              border: Border.all(color: color.withValues(alpha: 0.25)),
             ),
-            child: Icon(icon, color: enabled ? color : null, size: 22),
+            child: Icon(icon, color: enabled ? color : null, size: 21),
           ),
         ),
       ),
@@ -516,17 +553,17 @@ class NeoPill extends StatelessWidget {
   Widget build(BuildContext context) {
     final effectiveColor = color ?? Theme.of(context).colorScheme.primary;
     return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 6),
+      padding: const EdgeInsets.symmetric(horizontal: 9, vertical: 5),
       decoration: BoxDecoration(
         color: effectiveColor.withValues(alpha: 0.1),
         borderRadius: BorderRadius.circular(999),
-        border: Border.all(color: effectiveColor.withValues(alpha: 0.22)),
+        border: Border.all(color: effectiveColor.withValues(alpha: 0.28)),
       ),
       child: Row(
         mainAxisSize: MainAxisSize.min,
         children: <Widget>[
           if (icon != null) ...<Widget>[
-            Icon(icon, size: 14, color: effectiveColor),
+            Icon(icon, size: 13, color: effectiveColor),
             const SizedBox(width: 5),
           ],
           Flexible(
@@ -549,8 +586,8 @@ class NeoPill extends StatelessWidget {
 class NeoRoute<T> extends PageRouteBuilder<T> {
   NeoRoute({required WidgetBuilder builder})
     : super(
-        transitionDuration: const Duration(milliseconds: 420),
-        reverseTransitionDuration: const Duration(milliseconds: 300),
+        transitionDuration: const Duration(milliseconds: 320),
+        reverseTransitionDuration: const Duration(milliseconds: 240),
         pageBuilder: (context, animation, secondaryAnimation) =>
             builder(context),
         transitionsBuilder: (context, animation, secondaryAnimation, child) {
@@ -566,13 +603,10 @@ class NeoRoute<T> extends PageRouteBuilder<T> {
             opacity: curved,
             child: SlideTransition(
               position: Tween<Offset>(
-                begin: const Offset(0.035, 0.045),
+                begin: const Offset(0, 0.03),
                 end: Offset.zero,
               ).animate(curved),
-              child: ScaleTransition(
-                scale: Tween<double>(begin: 0.985, end: 1).animate(curved),
-                child: child,
-              ),
+              child: child,
             ),
           );
         },

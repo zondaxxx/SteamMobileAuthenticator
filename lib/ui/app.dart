@@ -83,24 +83,19 @@ class _LoadingScreenState extends State<_LoadingScreen>
               child: Opacity(opacity: 0.7 + _pulse.value * 0.3, child: child),
             ),
             child: Container(
-              width: 76,
-              height: 76,
+              width: 74,
+              height: 74,
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                color: NeoColors.blue.withValues(alpha: 0.12),
+                borderRadius: BorderRadius.circular(22),
+                border: Border.all(
+                  color: NeoColors.blue.withValues(alpha: 0.35),
                 ),
-                borderRadius: BorderRadius.circular(25),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: NeoColors.blue.withValues(alpha: 0.34),
-                    blurRadius: 32,
-                  ),
-                ],
               ),
               child: const Icon(
-                Icons.shield_rounded,
-                color: Colors.white,
-                size: 37,
+                Icons.shield_outlined,
+                color: NeoColors.blue,
+                size: 36,
               ),
             ),
           ),
@@ -204,21 +199,16 @@ class _DeviceLockGateState extends State<DeviceLockGate>
                       width: 72,
                       height: 72,
                       decoration: BoxDecoration(
-                        gradient: const LinearGradient(
-                          colors: <Color>[NeoColors.blue, NeoColors.cyan],
+                        color: NeoColors.blue.withValues(alpha: 0.12),
+                        borderRadius: BorderRadius.circular(22),
+                        border: Border.all(
+                          color: NeoColors.blue.withValues(alpha: 0.35),
                         ),
-                        borderRadius: BorderRadius.circular(24),
-                        boxShadow: <BoxShadow>[
-                          BoxShadow(
-                            color: NeoColors.blue.withValues(alpha: 0.28),
-                            blurRadius: 28,
-                          ),
-                        ],
                       ),
                       child: const Icon(
                         Icons.lock_rounded,
                         size: 34,
-                        color: Colors.white,
+                        color: NeoColors.blue,
                       ),
                     ),
                     const SizedBox(height: 20),

@@ -70,6 +70,12 @@ class AppController extends ChangeNotifier {
       for (final account in accounts)
         account.steamId: _steamClient.sessionHealth(account),
     };
+    final cachedProfiles = <int, SteamProfile>{};
+    for (final account in accounts) {
+      final profile = account.cachedProfile;
+      if (profile != null) cachedProfiles[account.steamId] = profile;
+    }
+    profiles = cachedProfiles;
     final autoRun = await _settingsRepository.loadAutoRun();
     lastAutoRun = autoRun.$1;
     lastAutoAccepted = autoRun.$2;
@@ -210,6 +216,12 @@ class AppController extends ChangeNotifier {
       final initialHealth = _steamClient.sessionHealth(account);
       nextHealth[account.steamId] = initialHealth;
       nextErrors.remove(account.steamId);
+      if (initialHealth == SessionHealth.missing ||
+          initialHealth == SessionHealth.expired) {
+        // Codes-only or stale sessions still deserve a live nickname and
+        // avatar; the public profile endpoint needs no Steam session.
+        await _loadPublicProfile(account, nextProfiles);
+      }
       if (initialHealth == SessionHealth.missing) continue;
       if (initialHealth == SessionHealth.expired) {
         nextErrors[account.steamId] = 'refresh_expired';
@@ -217,10 +229,12 @@ class AppController extends ChangeNotifier {
       }
       try {
         final result = await _steamClient.fetchProfile(account);
-        await _replaceAccount(result.$1);
+        final cached = result.$1.withCachedProfile(result.$2);
+        await _replaceAccount(cached);
         nextProfiles[account.steamId] = result.$2;
         nextHealth[account.steamId] = SessionHealth.healthy;
       } catch (error) {
+        await _loadPublicProfile(account, nextProfiles);
         final code = _sessionFailureCode(error);
         nextErrors[account.steamId] = code;
         nextHealth[account.steamId] =
@@ -233,6 +247,20 @@ class AppController extends ChangeNotifier {
     sessionHealth = nextHealth;
     sessionErrorCodes = nextErrors;
     notifyListeners();
+  }
+
+  Future<void> _loadPublicProfile(
+    SteamAccount account,
+    Map<int, SteamProfile> target,
+  ) async {
+    if (account.steamId == 0) return;
+    try {
+      final profile = await _steamClient.fetchPublicProfile(account.steamId);
+      await _replaceAccount(account.withCachedProfile(profile));
+      target[account.steamId] = profile;
+    } catch (_) {
+      // Public profile data is best-effort; codes keep working without it.
+    }
   }
 
   Future<InventorySnapshot> refreshInventory(SteamAccount account) async {

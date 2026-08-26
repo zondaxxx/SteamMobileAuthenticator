@@ -643,17 +643,12 @@ class _ThemeChoice extends StatelessWidget {
           curve: Curves.easeOutCubic,
           padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 12),
           decoration: BoxDecoration(
-            gradient: selected
-                ? LinearGradient(
-                    colors: <Color>[
-                      primary.withValues(alpha: 0.24),
-                      NeoColors.cyan.withValues(alpha: 0.08),
-                    ],
-                  )
-                : null,
-            borderRadius: BorderRadius.circular(18),
+            color: selected
+                ? primary.withValues(alpha: 0.1)
+                : Colors.transparent,
+            borderRadius: BorderRadius.circular(15),
             border: selected
-                ? Border.all(color: primary.withValues(alpha: 0.28))
+                ? Border.all(color: primary.withValues(alpha: 0.3))
                 : null,
           ),
           child: Column(

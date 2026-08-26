@@ -71,12 +71,14 @@ class _HomeShellState extends State<HomeShell> {
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: <Widget>[
                           Text(
-                            'STEAM NEO',
+                            strings.text('app_name').toUpperCase(),
                             style: Theme.of(context).textTheme.labelSmall
                                 ?.copyWith(
-                                  color: Theme.of(context).colorScheme.primary,
-                                  fontWeight: FontWeight.w800,
-                                  letterSpacing: 2.2,
+                                  color: Theme.of(context)
+                                      .colorScheme
+                                      .onSurfaceVariant,
+                                  fontWeight: FontWeight.w700,
+                                  letterSpacing: 1.6,
                                 ),
                           ),
                           const SizedBox(height: 3),
@@ -148,30 +150,33 @@ class _HomeShellState extends State<HomeShell> {
             haptic: true,
             semanticLabel: strings.text('import'),
             child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 17, vertical: 14),
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
               decoration: BoxDecoration(
-                gradient: const LinearGradient(
-                  colors: <Color>[NeoColors.blue, Color(0xff317ed9)],
-                ),
-                borderRadius: BorderRadius.circular(18),
+                color: Theme.of(context).colorScheme.primary,
+                borderRadius: BorderRadius.circular(15),
                 boxShadow: <BoxShadow>[
                   BoxShadow(
-                    color: NeoColors.blue.withValues(alpha: 0.35),
-                    blurRadius: 24,
-                    offset: const Offset(0, 10),
+                    color: Theme.of(context).colorScheme.primary
+                        .withValues(alpha: 0.25),
+                    blurRadius: 14,
+                    offset: const Offset(0, 5),
                   ),
                 ],
               ),
               child: Row(
                 mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
-                  const Icon(Icons.file_open_rounded, color: Colors.white),
-                  const SizedBox(width: 9),
+                  const Icon(
+                    Icons.file_open_rounded,
+                    color: Colors.white,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 8),
                   Text(
                     strings.text('import'),
                     style: const TextStyle(
                       color: Colors.white,
-                      fontWeight: FontWeight.w800,
+                      fontWeight: FontWeight.w600,
                     ),
                   ),
                 ],
@@ -389,23 +394,16 @@ class _NeoNavigationItem extends StatelessWidget {
       onTap: onTap,
       semanticLabel: destination.label,
       child: AnimatedContainer(
-        duration: const Duration(milliseconds: 280),
+        duration: const Duration(milliseconds: 240),
         curve: Curves.easeOutCubic,
-        height: 56,
+        height: 54,
         decoration: BoxDecoration(
-          gradient: selected
-              ? LinearGradient(
-                  begin: Alignment.topLeft,
-                  end: Alignment.bottomRight,
-                  colors: <Color>[
-                    primary.withValues(alpha: 0.23),
-                    NeoColors.cyan.withValues(alpha: 0.08),
-                  ],
-                )
-              : null,
-          borderRadius: BorderRadius.circular(18),
+          color: selected
+              ? primary.withValues(alpha: 0.12)
+              : Colors.transparent,
+          borderRadius: BorderRadius.circular(15),
           border: selected
-              ? Border.all(color: primary.withValues(alpha: 0.22))
+              ? Border.all(color: primary.withValues(alpha: 0.25))
               : null,
         ),
         child: Column(

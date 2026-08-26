@@ -8,7 +8,7 @@ The optional UI lock is separate from background processing: the operating syste
 
 Automatic confirmation is deliberately opt-in and starts in dry-run mode. Trade auto-accept additionally requires a partner SteamID64 extracted from Steam details to match the explicit allowlist and an item-count limit. These checks reduce accidental acceptance but cannot establish whether a trade is economically fair. Market confirmations do not provide a reliable structured value to mobileconf and have no value limit. A compromised Steam session, device, dependency or upstream API can still cause loss.
 
-Portable `.smabackup` files are encrypted with PBKDF2-HMAC-SHA256 (250,000 iterations) and AES-256-GCM. Their security depends on the user-selected password and the safety of the export location. The app does not store that password.
+Portable `.smabackup` files are encrypted with PBKDF2-HMAC-SHA256 (600,000 iterations) and AES-256-GCM. Their security depends on the user-selected password and the safety of the export location. The app does not store that password.
 
 ## Operational guidance
 

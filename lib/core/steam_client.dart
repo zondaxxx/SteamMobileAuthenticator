@@ -216,6 +216,63 @@ class SteamClient {
     );
   }
 
+  Future<SteamProfile> fetchPublicProfile(int steamId) async {
+    if (steamId == 0) throw const SteamApiException('profile_failed');
+    final uri = Uri.https(
+      'steamcommunity.com',
+      '/profiles/$steamId/',
+      const <String, String>{'xml': 'true'},
+    );
+    final response = await _client
+        .get(
+          uri,
+          headers: const <String, String>{
+            'User-Agent': 'SteamMobileAuthenticator/1.1',
+            'Accept': 'application/xml, text/xml, */*',
+          },
+        )
+        .timeout(const Duration(seconds: 15));
+    if (response.statusCode < 200 || response.statusCode >= 300) {
+      throw const SteamApiException('profile_failed');
+    }
+    final body = response.body;
+    String? tagValue(String tag) {
+      final match = RegExp(
+        '<$tag>\\s*(?:<!\\[CDATA\\[)?(.*?)(?:\\]\\]>)?\\s*</$tag>',
+        dotAll: true,
+        caseSensitive: false,
+      ).firstMatch(body);
+      if (match == null) return null;
+      // Decode &amp; last so escaped entities are not decoded twice.
+      return match
+          .group(1)!
+          .replaceAll('&quot;', '"')
+          .replaceAll('&lt;', '<')
+          .replaceAll('&gt;', '>')
+          .replaceAll('&amp;', '&')
+          .trim();
+    }
+
+    final idText = tagValue('steamID64');
+    if (idText == null || int.tryParse(idText) != steamId) {
+      throw const SteamApiException('profile_failed');
+    }
+    final avatarSource =
+        tagValue('avatarFull') ??
+        tagValue('avatarMedium') ??
+        tagValue('avatar');
+    String? avatar;
+    if (avatarSource != null && avatarSource.startsWith('http')) {
+      avatar = avatarSource.replaceFirst(RegExp(r'^http://'), 'https://');
+    }
+    final name = tagValue('steamID') ?? tagValue('personaName');
+    return SteamProfile(
+      steamId: steamId,
+      personaName: name?.isNotEmpty == true ? name! : steamId.toString(),
+      avatarUrl: avatar,
+    );
+  }
+
   Future<SteamAccount> actOnConfirmation({
     required SteamAccount account,
     required SteamConfirmation confirmation,
@@ -410,8 +467,7 @@ class SteamClient {
       if (payload is! Map) return false;
       final exp = int.tryParse(payload['exp']?.toString() ?? '');
       if (exp == null) return false;
-      final now = DateTime.now().millisecondsSinceEpoch ~/ 1000;
-      return now + grace.inSeconds >= exp;
+      return SteamTime.now() + grace.inSeconds >= exp;
     } catch (_) {
       return false;
     }

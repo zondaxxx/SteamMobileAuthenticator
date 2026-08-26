@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- All Steam traffic is HTTPS; plaintext HTTP is rejected outright. -->
+<network-security-config>
+    <base-config cleartextTrafficPermitted="false">
+        <trust-anchors>
+            <!-- Do not trust user-installed CAs: a rogue cert must not be able
+                 to intercept Steam sessions or authenticator traffic. -->
+            <certificates src="system" />
+        </trust-anchors>
+    </base-config>
+</network-security-config>

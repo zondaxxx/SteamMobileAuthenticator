@@ -198,21 +198,16 @@ class _EmptyInventory extends StatelessWidget {
                 width: 72,
                 height: 72,
                 decoration: BoxDecoration(
-                  gradient: const LinearGradient(
-                    colors: <Color>[NeoColors.violet, NeoColors.blue],
+                  color: NeoColors.violet.withValues(alpha: 0.12),
+                  borderRadius: BorderRadius.circular(22),
+                  border: Border.all(
+                    color: NeoColors.violet.withValues(alpha: 0.3),
                   ),
-                  borderRadius: BorderRadius.circular(24),
-                  boxShadow: <BoxShadow>[
-                    BoxShadow(
-                      color: NeoColors.violet.withValues(alpha: 0.28),
-                      blurRadius: 28,
-                    ),
-                  ],
                 ),
                 child: const Icon(
                   Icons.inventory_2_outlined,
-                  size: 36,
-                  color: Colors.white,
+                  size: 34,
+                  color: NeoColors.violet,
                 ),
               ),
               const SizedBox(height: 18),

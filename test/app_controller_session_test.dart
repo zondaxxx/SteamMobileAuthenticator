@@ -50,4 +50,8 @@ class _FailingSteamClient extends SteamClient {
   @override
   Future<(SteamAccount, SteamProfile)> fetchProfile(SteamAccount account) =>
       Future<(SteamAccount, SteamProfile)>.error(SteamApiException(code));
+
+  @override
+  Future<SteamProfile> fetchPublicProfile(int steamId) =>
+      Future<SteamProfile>.error(const SteamApiException('profile_failed'));
 }

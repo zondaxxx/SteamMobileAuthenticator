@@ -326,14 +326,9 @@ class _ConfirmationCard extends StatelessWidget {
                 width: 50,
                 height: 50,
                 decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: <Color>[
-                      accent.withValues(alpha: 0.24),
-                      accent.withValues(alpha: 0.07),
-                    ],
-                  ),
-                  borderRadius: BorderRadius.circular(17),
-                  border: Border.all(color: accent.withValues(alpha: 0.25)),
+                  color: accent.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(15),
+                  border: Border.all(color: accent.withValues(alpha: 0.3)),
                 ),
                 clipBehavior: Clip.antiAlias,
                 child: iconUri?.scheme == 'https'
