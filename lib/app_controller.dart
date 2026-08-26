@@ -238,7 +238,9 @@ class AppController extends ChangeNotifier {
         final code = _sessionFailureCode(error);
         nextErrors[account.steamId] = code;
         nextHealth[account.steamId] =
-            code == 'refresh_expired' || code == 'session_required'
+            code == 'refresh_expired' ||
+                code == 'session_required' ||
+                code == 'session_denied'
             ? SessionHealth.expired
             : SessionHealth.error;
       }

@@ -198,19 +198,7 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
         .where((account) => account.steamId != 0)
         .toList(growable: false);
     return NeoScaffold(
-      appBar: AppBar(
-        title: Text(strings.text('qr_login')),
-        actions: <Widget>[
-          Padding(
-            padding: const EdgeInsets.only(right: 12),
-            child: NeoPill(
-              label: strings.text('qr_secure'),
-              icon: Icons.shield_outlined,
-              color: NeoColors.mint,
-            ),
-          ),
-        ],
-      ),
+      appBar: AppBar(title: Text(strings.text('qr_login'))),
       body: accounts.isEmpty
           ? Center(
               child: Padding(
@@ -374,7 +362,6 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                             tooltip: strings.text('scan_from_photo'),
                             onPressed: _processing ? null : _scanFromGallery,
                             icon: Icons.photo_outlined,
-                            accent: NeoColors.violet,
                           ),
                           NeoIconButton(
                             tooltip: strings.text('paste_link'),
@@ -382,7 +369,6 @@ class _QrLoginScreenState extends State<QrLoginScreen> {
                                 ? null
                                 : () => _manual(accounts),
                             icon: Icons.link_rounded,
-                            accent: NeoColors.cyan,
                           ),
                         ],
                       ),

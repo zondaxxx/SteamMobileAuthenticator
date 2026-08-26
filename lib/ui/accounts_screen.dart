@@ -27,12 +27,11 @@ class AccountsScreen extends StatefulWidget {
 class _AccountsScreenState extends State<AccountsScreen> {
   Timer? _timer;
   late final PageController _pages;
-  int _page = 0;
 
   @override
   void initState() {
     super.initState();
-    _pages = PageController(viewportFraction: 0.9);
+    _pages = PageController(viewportFraction: 0.94);
     _timer = Timer.periodic(const Duration(milliseconds: 200), (_) {
       if (mounted) setState(() {});
     });
@@ -48,100 +47,38 @@ class _AccountsScreenState extends State<AccountsScreen> {
   @override
   Widget build(BuildContext context) {
     final accounts = widget.controller.accounts;
-    final strings = AppStrings.of(context);
     if (accounts.isEmpty) {
       return _EmptyAccounts(onImport: widget.onImport);
     }
-    final visiblePage = _page.clamp(0, accounts.length - 1);
-    return Column(
-      children: <Widget>[
-        Padding(
-          padding: const EdgeInsets.fromLTRB(20, 8, 20, 2),
-          child: Row(
-            children: <Widget>[
-              NeoPill(
-                icon: Icons.shield_outlined,
-                label: '${accounts.length} ${strings.text('accounts')}',
-                color: NeoColors.mint,
-              ),
-              const Spacer(),
-              if (accounts.length > 1)
-                NeoPill(
-                  icon: Icons.swipe_rounded,
-                  label: '${visiblePage + 1}/${accounts.length}',
-                ),
-            ],
+    return PageView.builder(
+      controller: _pages,
+      itemCount: accounts.length,
+      onPageChanged: (_) => HapticFeedback.selectionClick(),
+      itemBuilder: (context, index) {
+        final account = accounts[index];
+        return AnimatedBuilder(
+          animation: _pages,
+          builder: (context, child) {
+            var scale = 1.0;
+            if (_pages.hasClients && _pages.position.hasContentDimensions) {
+              final page = _pages.page ?? _pages.initialPage.toDouble();
+              scale = (1 - ((page - index).abs() * 0.04)).clamp(0.95, 1);
+            }
+            return Transform.scale(scale: scale, child: child);
+          },
+          child: _AccountCard(
+            account: account,
+            profile: widget.controller.profiles[account.steamId],
+            health:
+                widget.controller.sessionHealth[account.steamId] ??
+                SessionHealth.missing,
+            onSessionTap: () => _showSessionInfo(account),
+            onDelete: () => _delete(account),
           ),
-        ),
-        Expanded(
-          child: PageView.builder(
-            controller: _pages,
-            itemCount: accounts.length,
-            onPageChanged: (value) {
-              HapticFeedback.selectionClick();
-              setState(() => _page = value);
-            },
-            itemBuilder: (context, index) {
-              final account = accounts[index];
-              return AnimatedBuilder(
-                animation: _pages,
-                builder: (context, child) {
-                  var scale = 1.0;
-                  if (_pages.hasClients &&
-                      _pages.position.hasContentDimensions) {
-                    final page = _pages.page ?? _pages.initialPage.toDouble();
-                    scale = (1 - ((page - index).abs() * 0.045)).clamp(0.94, 1);
-                  }
-                  return Transform.scale(scale: scale, child: child);
-                },
-                child: _AccountCard(
-                  account: account,
-                  profile: widget.controller.profiles[account.steamId],
-                  health:
-                      widget.controller.sessionHealth[account.steamId] ??
-                      SessionHealth.missing,
-                  accent: _accentFor(index),
-                  onSessionTap: () => _showSessionInfo(account),
-                  onDelete: () => _delete(account),
-                ),
-              );
-            },
-          ),
-        ),
-        if (accounts.length > 1)
-          Padding(
-            padding: const EdgeInsets.only(top: 4, bottom: 82),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.center,
-              children: <Widget>[
-                for (var index = 0; index < accounts.length; index++)
-                  AnimatedContainer(
-                    duration: const Duration(milliseconds: 240),
-                    margin: const EdgeInsets.symmetric(horizontal: 3),
-                    width: index == visiblePage ? 22 : 6,
-                    height: 6,
-                    decoration: BoxDecoration(
-                      color: index == visiblePage
-                          ? Theme.of(context).colorScheme.primary
-                          : Theme.of(context).colorScheme.outline,
-                      borderRadius: BorderRadius.circular(999),
-                    ),
-                  ),
-              ],
-            ),
-          )
-        else
-          const SizedBox(height: 82),
-      ],
+        );
+      },
     );
   }
-
-  Color _accentFor(int index) => const <Color>[
-    NeoColors.blue,
-    NeoColors.violet,
-    NeoColors.cyan,
-    NeoColors.mint,
-  ][index % 4];
 
   Future<void> _showSessionInfo(SteamAccount account) async {
     final strings = AppStrings.of(context);
@@ -149,13 +86,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
         widget.controller.sessionHealth[account.steamId] ??
         SessionHealth.missing;
     final errorCode = widget.controller.sessionErrorCodes[account.steamId];
-    final color = switch (health) {
-      SessionHealth.healthy => NeoColors.mint,
-      SessionHealth.refreshable || SessionHealth.checking => NeoColors.amber,
-      SessionHealth.expired ||
-      SessionHealth.missing ||
-      SessionHealth.error => NeoColors.danger,
-    };
+    final color = _healthColor(health);
     final canRetry =
         health == SessionHealth.error || health == SessionHealth.refreshable;
     await showDialog<void>(
@@ -167,78 +98,41 @@ class _AccountsScreenState extends State<AccountsScreen> {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: <Widget>[
-              NeoSurface(
-                accent: color,
-                radius: 20,
-                padding: const EdgeInsets.all(16),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    Icon(_healthIcon(health), color: color),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            strings.text('session_health_${health.name}'),
-                            style: Theme.of(context).textTheme.titleSmall,
-                          ),
-                          const SizedBox(height: 6),
-                          Text(
-                            strings.text('session_health_${health.name}_body'),
-                            style: Theme.of(context).textTheme.bodySmall,
-                          ),
-                        ],
-                      ),
+              Row(
+                children: <Widget>[
+                  Icon(_healthIcon(health), size: 20, color: color),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      strings.text('session_health_${health.name}'),
+                      style: Theme.of(context).textTheme.titleSmall,
                     ),
-                  ],
-                ),
+                  ),
+                ],
               ),
               if (errorCode != null) ...<Widget>[
                 const SizedBox(height: 12),
-                NeoSurface(
-                  accent: NeoColors.danger,
-                  radius: 20,
-                  padding: const EdgeInsets.all(15),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: <Widget>[
-                      Row(
-                        children: <Widget>[
-                          Text(
-                            strings.text('session_error_cause'),
-                            style: Theme.of(context).textTheme.labelLarge,
-                          ),
-                          const Spacer(),
-                          NeoPill(label: errorCode, color: NeoColors.danger),
-                        ],
-                      ),
-                      const SizedBox(height: 8),
-                      Text(strings.errorCode(errorCode)),
-                    ],
-                  ),
+                Text(
+                  strings.errorCode(errorCode),
+                  style: Theme.of(context).textTheme.bodySmall,
                 ),
               ],
+              const SizedBox(height: 14),
+              Text(
+                strings.text('session_health_${health.name}_body'),
+                style: Theme.of(context).textTheme.bodySmall,
+              ),
               const SizedBox(height: 12),
-              NeoSurface(
-                accent: NeoColors.mint,
-                radius: 20,
-                padding: const EdgeInsets.all(15),
-                child: Row(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: <Widget>[
-                    const Icon(Icons.password_rounded, color: NeoColors.mint),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Text(strings.text('session_codes_unaffected')),
-                    ),
-                  ],
+              Text(
+                strings.text('session_codes_unaffected'),
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                  color: Theme.of(context).colorScheme.onSurfaceVariant,
                 ),
               ),
               if (health == SessionHealth.expired ||
-                  health == SessionHealth.missing) ...<Widget>[
-                const SizedBox(height: 12),
+                  health == SessionHealth.missing ||
+                  health == SessionHealth.checking) ...<Widget>[
+                const SizedBox(height: 14),
                 Text(
                   strings.text('session_reimport_advice'),
                   style: Theme.of(context).textTheme.bodySmall,
@@ -254,7 +148,7 @@ class _AccountsScreenState extends State<AccountsScreen> {
                 Navigator.pop(context);
                 await widget.controller.refreshAccountMetadata();
               },
-              icon: const Icon(Icons.refresh_rounded),
+              icon: const Icon(Icons.refresh_rounded, size: 18),
               label: Text(strings.text('refresh')),
             ),
           FilledButton(
@@ -275,12 +169,19 @@ class _AccountsScreenState extends State<AccountsScreen> {
     SessionHealth.error => Icons.error_outline_rounded,
   };
 
+  Color _healthColor(SessionHealth value) => switch (value) {
+    SessionHealth.healthy => NeoColors.mint,
+    SessionHealth.refreshable || SessionHealth.checking => NeoColors.amber,
+    SessionHealth.expired ||
+    SessionHealth.missing ||
+    SessionHealth.error => NeoColors.danger,
+  };
+
   Future<void> _delete(SteamAccount account) async {
     final strings = AppStrings.of(context);
     final confirmed = await showDialog<bool>(
       context: context,
       builder: (context) => AlertDialog(
-        icon: const Icon(Icons.delete_outline_rounded),
         title: Text(strings.text('delete_title')),
         content: Text(strings.text('delete_body')),
         actions: <Widget>[
@@ -304,7 +205,6 @@ class _AccountCard extends StatelessWidget {
     required this.account,
     required this.profile,
     required this.health,
-    required this.accent,
     required this.onSessionTap,
     required this.onDelete,
   });
@@ -312,67 +212,63 @@ class _AccountCard extends StatelessWidget {
   final SteamAccount account;
   final SteamProfile? profile;
   final SessionHealth health;
-  final Color accent;
   final VoidCallback onSessionTap;
   final VoidCallback onDelete;
 
   @override
   Widget build(BuildContext context) {
     final strings = AppStrings.of(context);
+    final scheme = Theme.of(context).colorScheme;
     final code = SteamGuard.code(account, SteamTime.now());
     final remaining = SteamTime.secondsRemainingPrecise();
-    final scheme = Theme.of(context).colorScheme;
+    final name = profile?.personaName ?? account.accountName;
     return Padding(
-      padding: const EdgeInsets.fromLTRB(2, 12, 2, 18),
+      padding: const EdgeInsets.fromLTRB(2, 6, 2, 16),
       child: NeoSurface(
-        accent: accent,
-        radius: 32,
-        padding: const EdgeInsets.fromLTRB(22, 22, 14, 20),
+        radius: 20,
+        padding: const EdgeInsets.fromLTRB(20, 20, 12, 18),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: <Widget>[
             Row(
               children: <Widget>[
-                Hero(
-                  tag: 'steam-avatar-${account.steamId}-${account.accountName}',
-                  child: Container(
-                    width: 56,
-                    height: 56,
-                    padding: const EdgeInsets.all(2),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(18),
-                      border: Border.all(color: accent.withValues(alpha: 0.5)),
-                    ),
-                    child: NeoAvatar(
-                      name: profile?.personaName ?? account.accountName,
-                      url: profile?.avatarUrl,
-                      size: 50,
-                      radius: 14,
-                      accent: accent,
-                    ),
-                  ),
+                NeoAvatar(
+                  name: name,
+                  url: profile?.avatarUrl,
+                  size: 52,
+                  radius: 15,
                 ),
-                const SizedBox(width: 14),
+                const SizedBox(width: 13),
                 Expanded(
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: <Widget>[
                       Text(
-                        profile?.personaName ?? account.accountName,
+                        name,
                         maxLines: 1,
                         overflow: TextOverflow.ellipsis,
-                        style: Theme.of(context).textTheme.titleLarge,
+                        style: Theme.of(context).textTheme.titleMedium,
                       ),
-                      const SizedBox(height: 6),
+                      const SizedBox(height: 5),
                       NeoPressable(
                         onTap: onSessionTap,
                         semanticLabel:
                             '${strings.text('session_health_${health.name}')}. '
                             '${strings.text('details')}',
-                        child: NeoPill(
-                          icon: _healthIcon(health),
-                          label: strings.text('session_health_${health.name}'),
-                          color: _healthColor(health),
+                        child: Row(
+                          mainAxisSize: MainAxisSize.min,
+                          children: <Widget>[
+                            NeoDot(color: _healthColor(health), size: 7),
+                            const SizedBox(width: 6),
+                            Flexible(
+                              child: Text(
+                                strings.text('session_health_${health.name}'),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: Theme.of(context).textTheme.bodySmall,
+                              ),
+                            ),
+                          ],
                         ),
                       ),
                     ],
@@ -387,7 +283,7 @@ class _AccountCard extends StatelessWidget {
                       value: 'delete',
                       child: Row(
                         children: <Widget>[
-                          const Icon(Icons.delete_outline_rounded),
+                          const Icon(Icons.delete_outline_rounded, size: 20),
                           const SizedBox(width: 12),
                           Text(strings.text('delete')),
                         ],
@@ -406,10 +302,10 @@ class _AccountCard extends StatelessWidget {
               overflow: TextOverflow.ellipsis,
               style: Theme.of(context).textTheme.labelSmall?.copyWith(
                 color: scheme.onSurfaceVariant,
-                letterSpacing: 0.7,
+                letterSpacing: 0.5,
               ),
             ),
-            const SizedBox(height: 10),
+            const SizedBox(height: 8),
             NeoPressable(
               onTap: () async {
                 await Clipboard.setData(ClipboardData(text: code));
@@ -421,16 +317,15 @@ class _AccountCard extends StatelessWidget {
               },
               semanticLabel: strings.text('tap_to_copy'),
               child: Row(
+                crossAxisAlignment: CrossAxisAlignment.end,
                 children: <Widget>[
                   Expanded(
                     child: AnimatedSwitcher(
-                      duration: const Duration(milliseconds: 450),
-                      switchInCurve: Curves.easeOutBack,
+                      duration: const Duration(milliseconds: 380),
+                      switchInCurve: Curves.easeOutCubic,
                       switchOutCurve: Curves.easeInCubic,
-                      transitionBuilder: (child, animation) => FadeTransition(
-                        opacity: animation,
-                        child: ScaleTransition(scale: animation, child: child),
-                      ),
+                      transitionBuilder: (child, animation) =>
+                          FadeTransition(opacity: animation, child: child),
                       child: FittedBox(
                         key: ValueKey<String>(code),
                         fit: BoxFit.scaleDown,
@@ -439,8 +334,8 @@ class _AccountCard extends StatelessWidget {
                           code,
                           style: Theme.of(context).textTheme.displaySmall
                               ?.copyWith(
-                                fontWeight: FontWeight.w800,
-                                letterSpacing: 8,
+                                fontWeight: FontWeight.w700,
+                                letterSpacing: 7,
                                 fontFeatures: const <FontFeature>[
                                   FontFeature.tabularFigures(),
                                 ],
@@ -450,59 +345,38 @@ class _AccountCard extends StatelessWidget {
                     ),
                   ),
                   const SizedBox(width: 12),
-                  SizedBox.square(
-                    dimension: 58,
-                    child: CustomPaint(
-                      painter: _TimerRingPainter(
-                        value: (remaining / 30).clamp(0, 1),
-                        accent: remaining <= 5 ? NeoColors.danger : accent,
-                        track: scheme.outlineVariant,
-                      ),
-                      child: Center(
-                        child: Text(
-                          remaining.ceil().toString(),
-                          style: Theme.of(context).textTheme.labelLarge
-                              ?.copyWith(
-                                color: remaining <= 5
-                                    ? NeoColors.danger
-                                    : accent,
-                                fontFeatures: const <FontFeature>[
-                                  FontFeature.tabularFigures(),
-                                ],
-                              ),
-                        ),
+                  SizedBox(
+                    height: 34,
+                    child: Text(
+                      remaining.ceil().toString(),
+                      style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: remaining <= 5
+                            ? NeoColors.danger
+                            : scheme.onSurfaceVariant,
+                        fontFeatures: const <FontFeature>[
+                          FontFeature.tabularFigures(),
+                        ],
                       ),
                     ),
                   ),
                 ],
               ),
             ),
-            const SizedBox(height: 16),
-            Row(
-              children: <Widget>[
-                Icon(Icons.touch_app_rounded, size: 16, color: accent),
-                const SizedBox(width: 7),
-                Text(
-                  strings.text('tap_to_copy'),
-                  style: Theme.of(context).textTheme.bodySmall
-                      ?.copyWith(color: scheme.onSurfaceVariant),
-                ),
-              ],
+            const SizedBox(height: 10),
+            ClipRRect(
+              borderRadius: BorderRadius.circular(99),
+              child: LinearProgressIndicator(
+                value: (remaining / 30).clamp(0, 1),
+                minHeight: 3,
+                backgroundColor: scheme.outlineVariant,
+                color: remaining <= 5 ? NeoColors.danger : scheme.primary,
+              ),
             ),
           ],
         ),
       ),
     );
   }
-
-  IconData _healthIcon(SessionHealth value) => switch (value) {
-    SessionHealth.healthy => Icons.cloud_done_outlined,
-    SessionHealth.refreshable => Icons.sync_rounded,
-    SessionHealth.expired => Icons.cloud_off_outlined,
-    SessionHealth.missing => Icons.key_off_outlined,
-    SessionHealth.checking => Icons.hourglass_top_rounded,
-    SessionHealth.error => Icons.error_outline_rounded,
-  };
 
   Color _healthColor(SessionHealth value) => switch (value) {
     SessionHealth.healthy => NeoColors.mint,
@@ -511,49 +385,6 @@ class _AccountCard extends StatelessWidget {
     SessionHealth.missing ||
     SessionHealth.error => NeoColors.danger,
   };
-}
-
-class _TimerRingPainter extends CustomPainter {
-  const _TimerRingPainter({
-    required this.value,
-    required this.accent,
-    required this.track,
-  });
-
-  final double value;
-  final Color accent;
-  final Color track;
-
-  @override
-  void paint(Canvas canvas, Size size) {
-    final center = size.center(Offset.zero);
-    final radius = size.shortestSide / 2 - 4;
-    canvas.drawCircle(
-      center,
-      radius,
-      Paint()
-        ..color = track.withValues(alpha: 0.85)
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4,
-    );
-    canvas.drawArc(
-      Rect.fromCircle(center: center, radius: radius),
-      -1.5708,
-      6.28318 * value,
-      false,
-      Paint()
-        ..color = accent
-        ..style = PaintingStyle.stroke
-        ..strokeWidth = 4
-        ..strokeCap = StrokeCap.round,
-    );
-  }
-
-  @override
-  bool shouldRepaint(_TimerRingPainter oldDelegate) =>
-      oldDelegate.value != value ||
-      oldDelegate.accent != accent ||
-      oldDelegate.track != track;
 }
 
 class _EmptyAccounts extends StatelessWidget {
@@ -566,53 +397,35 @@ class _EmptyAccounts extends StatelessWidget {
     final strings = AppStrings.of(context);
     return Center(
       child: Padding(
-        padding: const EdgeInsets.fromLTRB(28, 18, 28, 92),
-        child: NeoSurface(
-          accent: NeoColors.cyan,
-          padding: const EdgeInsets.all(28),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: <Widget>[
-              Container(
-                width: 72,
-                height: 72,
-                decoration: BoxDecoration(
-                  color: NeoColors.cyan.withValues(alpha: 0.12),
-                  borderRadius: BorderRadius.circular(22),
-                  border: Border.all(
-                    color: NeoColors.cyan.withValues(alpha: 0.3),
-                  ),
-                ),
-                child: const Icon(
-                  Icons.shield_outlined,
-                  size: 34,
-                  color: NeoColors.cyan,
-                ),
+        padding: const EdgeInsets.fromLTRB(28, 0, 28, 24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: <Widget>[
+            Icon(
+              Icons.shield_outlined,
+              size: 44,
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+            const SizedBox(height: 18),
+            Text(
+              strings.text('no_accounts'),
+              style: Theme.of(context).textTheme.headlineSmall,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              strings.text('no_accounts_body'),
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Theme.of(context).colorScheme.onSurfaceVariant,
               ),
-              const SizedBox(height: 22),
-              Text(
-                strings.text('no_accounts'),
-                style: Theme.of(context).textTheme.headlineSmall,
-              ),
-              const SizedBox(height: 9),
-              Text(
-                strings.text('no_accounts_body'),
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  color: Theme.of(context).colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 24),
-              SizedBox(
-                width: double.infinity,
-                child: FilledButton.icon(
-                  onPressed: onImport,
-                  icon: const Icon(Icons.file_open_rounded),
-                  label: Text(strings.text('import')),
-                ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(height: 22),
+            FilledButton.icon(
+              onPressed: onImport,
+              icon: const Icon(Icons.file_open_outlined, size: 18),
+              label: Text(strings.text('import')),
+            ),
+          ],
         ),
       ),
     );

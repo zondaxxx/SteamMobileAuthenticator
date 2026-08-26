@@ -424,25 +424,12 @@ class _Progress extends StatelessWidget {
           child: AnimatedContainer(
             duration: const Duration(milliseconds: 320),
             curve: Curves.easeOutCubic,
-            height: index == step ? 7 : 5,
+            height: index == step ? 4 : 3,
             decoration: BoxDecoration(
-              gradient: index <= step
-                  ? const LinearGradient(
-                      colors: <Color>[NeoColors.blue, NeoColors.cyan],
-                    )
-                  : null,
               color: index <= step
-                  ? null
+                  ? Theme.of(context).colorScheme.primary
                   : Theme.of(context).colorScheme.outlineVariant,
               borderRadius: BorderRadius.circular(99),
-              boxShadow: index == step
-                  ? <BoxShadow>[
-                      BoxShadow(
-                        color: NeoColors.cyan.withValues(alpha: 0.4),
-                        blurRadius: 10,
-                      ),
-                    ]
-                  : null,
             ),
           ),
         ),

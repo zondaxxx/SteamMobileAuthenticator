@@ -81,7 +81,6 @@ class _InventoryScreenState extends State<InventoryScreen> {
                 icon: widget.controller.busy
                     ? Icons.hourglass_top_rounded
                     : Icons.refresh_rounded,
-                accent: NeoColors.violet,
               ),
             ],
           ),

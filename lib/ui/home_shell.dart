@@ -63,61 +63,48 @@ class _HomeShellState extends State<HomeShell> {
           child: Column(
             children: <Widget>[
               Padding(
-                padding: const EdgeInsets.fromLTRB(20, 12, 16, 8),
+                padding: const EdgeInsets.fromLTRB(20, 14, 16, 8),
                 child: Row(
                   children: <Widget>[
                     Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: <Widget>[
-                          Text(
-                            strings.text('app_name').toUpperCase(),
-                            style: Theme.of(context).textTheme.labelSmall
-                                ?.copyWith(
-                                  color: Theme.of(context)
-                                      .colorScheme
-                                      .onSurfaceVariant,
-                                  fontWeight: FontWeight.w700,
-                                  letterSpacing: 1.6,
-                                ),
+                      child: AnimatedSwitcher(
+                        duration: const Duration(milliseconds: 220),
+                        transitionBuilder: (child, animation) => FadeTransition(
+                          opacity: animation,
+                          child: SlideTransition(
+                            position: Tween<Offset>(
+                              begin: const Offset(0, 0.15),
+                              end: Offset.zero,
+                            ).animate(animation),
+                            child: child,
                           ),
-                          const SizedBox(height: 3),
-                          AnimatedSwitcher(
-                            duration: const Duration(milliseconds: 280),
-                            transitionBuilder: (child, animation) =>
-                                FadeTransition(
-                                  opacity: animation,
-                                  child: SlideTransition(
-                                    position: Tween<Offset>(
-                                      begin: const Offset(0, 0.2),
-                                      end: Offset.zero,
-                                    ).animate(animation),
-                                    child: child,
-                                  ),
-                                ),
-                            child: Text(
-                              titles[_index],
-                              key: ValueKey<int>(_index),
-                              style: Theme.of(context).textTheme.headlineMedium,
-                            ),
-                          ),
-                        ],
+                        ),
+                        child: Text(
+                          titles[_index],
+                          key: ValueKey<int>(_index),
+                          style: Theme.of(context).textTheme.headlineMedium,
+                        ),
                       ),
                     ),
+                    const SizedBox(width: 8),
+                    NeoIconButton(
+                      tooltip: strings.text('import'),
+                      onPressed: _import,
+                      icon: Icons.file_open_outlined,
+                    ),
+                    const SizedBox(width: 8),
                     NeoIconButton(
                       tooltip: strings.text('qr_login'),
                       onPressed: widget.controller.accounts.isEmpty
                           ? null
                           : _openQr,
                       icon: Icons.qr_code_scanner_rounded,
-                      accent: NeoColors.cyan,
                     ),
-                    const SizedBox(width: 9),
+                    const SizedBox(width: 8),
                     NeoIconButton(
                       tooltip: strings.text('add_authenticator'),
                       onPressed: _openEnrollment,
                       icon: Icons.person_add_alt_1_rounded,
-                      accent: NeoColors.violet,
                     ),
                   ],
                 ),
@@ -139,49 +126,6 @@ class _HomeShellState extends State<HomeShell> {
                 ),
               ),
             ],
-          ),
-        ),
-        floatingActionButton: AnimatedScale(
-          scale: _index == 0 ? 1 : 0,
-          duration: const Duration(milliseconds: 220),
-          curve: Curves.easeOutBack,
-          child: NeoPressable(
-            onTap: _import,
-            haptic: true,
-            semanticLabel: strings.text('import'),
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 13),
-              decoration: BoxDecoration(
-                color: Theme.of(context).colorScheme.primary,
-                borderRadius: BorderRadius.circular(15),
-                boxShadow: <BoxShadow>[
-                  BoxShadow(
-                    color: Theme.of(context).colorScheme.primary
-                        .withValues(alpha: 0.25),
-                    blurRadius: 14,
-                    offset: const Offset(0, 5),
-                  ),
-                ],
-              ),
-              child: Row(
-                mainAxisSize: MainAxisSize.min,
-                children: <Widget>[
-                  const Icon(
-                    Icons.file_open_rounded,
-                    color: Colors.white,
-                    size: 20,
-                  ),
-                  const SizedBox(width: 8),
-                  Text(
-                    strings.text('import'),
-                    style: const TextStyle(
-                      color: Colors.white,
-                      fontWeight: FontWeight.w600,
-                    ),
-                  ),
-                ],
-              ),
-            ),
           ),
         ),
         bottomNavigationBar: _NeoNavigation(
@@ -336,40 +280,29 @@ class _NeoNavigation extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final dark = Theme.of(context).brightness == Brightness.dark;
-    return SafeArea(
-      top: false,
-      minimum: const EdgeInsets.fromLTRB(12, 5, 12, 9),
-      child: Container(
-        height: 70,
-        padding: const EdgeInsets.all(7),
-        decoration: BoxDecoration(
-          color: (dark ? const Color(0xff03080c) : Colors.white).withValues(
-            alpha: 0.96,
-          ),
-          borderRadius: BorderRadius.circular(25),
-          border: Border.all(
-            color: Theme.of(context).colorScheme.outline.withValues(alpha: 0.7),
-          ),
-          boxShadow: <BoxShadow>[
-            BoxShadow(
-              color: Colors.black.withValues(alpha: dark ? 0.34 : 0.1),
-              blurRadius: 30,
-              offset: const Offset(0, 10),
-            ),
-          ],
+    return Container(
+      decoration: BoxDecoration(
+        color: Theme.of(context).colorScheme.surface,
+        border: Border(
+          top: BorderSide(color: Theme.of(context).colorScheme.outlineVariant),
         ),
-        child: Row(
-          children: <Widget>[
-            for (var index = 0; index < destinations.length; index++)
-              Expanded(
-                child: _NeoNavigationItem(
-                  destination: destinations[index],
-                  selected: index == selectedIndex,
-                  onTap: () => onSelected(index),
+      ),
+      child: SafeArea(
+        top: false,
+        child: SizedBox(
+          height: 62,
+          child: Row(
+            children: <Widget>[
+              for (var index = 0; index < destinations.length; index++)
+                Expanded(
+                  child: _NeoNavigationItem(
+                    destination: destinations[index],
+                    selected: index == selectedIndex,
+                    onTap: () => onSelected(index),
+                  ),
                 ),
-              ),
-          ],
+            ],
+          ),
         ),
       ),
     );
@@ -390,52 +323,30 @@ class _NeoNavigationItem extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final primary = Theme.of(context).colorScheme.primary;
+    final tint = selected
+        ? primary
+        : Theme.of(context).colorScheme.onSurfaceVariant;
     return NeoPressable(
       onTap: onTap,
+      haptic: true,
       semanticLabel: destination.label,
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 240),
-        curve: Curves.easeOutCubic,
-        height: 54,
-        decoration: BoxDecoration(
-          color: selected
-              ? primary.withValues(alpha: 0.12)
-              : Colors.transparent,
-          borderRadius: BorderRadius.circular(15),
-          border: selected
-              ? Border.all(color: primary.withValues(alpha: 0.25))
-              : null,
-        ),
-        child: Column(
-          mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            AnimatedScale(
-              scale: selected ? 1.08 : 1,
-              duration: const Duration(milliseconds: 240),
-              child: Icon(
-                destination.icon,
-                size: 22,
-                color: selected
-                    ? primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-              ),
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: <Widget>[
+          Icon(destination.icon, size: 22, color: tint),
+          const SizedBox(height: 4),
+          Text(
+            destination.label,
+            maxLines: 1,
+            overflow: TextOverflow.fade,
+            softWrap: false,
+            style: Theme.of(context).textTheme.labelSmall?.copyWith(
+              color: tint,
+              fontSize: 10,
+              fontWeight: selected ? FontWeight.w600 : FontWeight.w500,
             ),
-            const SizedBox(height: 3),
-            Text(
-              destination.label,
-              maxLines: 1,
-              overflow: TextOverflow.fade,
-              softWrap: false,
-              style: Theme.of(context).textTheme.labelSmall?.copyWith(
-                color: selected
-                    ? primary
-                    : Theme.of(context).colorScheme.onSurfaceVariant,
-                fontSize: 9.5,
-                fontWeight: selected ? FontWeight.w800 : FontWeight.w600,
-              ),
-            ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

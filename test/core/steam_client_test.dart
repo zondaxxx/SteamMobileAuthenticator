@@ -1,8 +1,18 @@
+import 'dart:convert';
+
 import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 import 'package:steam_mobile_authenticator/core/models.dart';
 import 'package:steam_mobile_authenticator/core/steam_client.dart';
+
+/// Builds a Steam-shaped JWT whose payload carries [claims].
+String fakeJwt(Map<String, Object?> claims) {
+  String part(String source) =>
+      base64Url.encode(utf8.encode(source)).replaceAll('=', '');
+  return '${part('{"typ":"JWT","alg":"EdDSA"}').split('').join()}'
+      '.${part(jsonEncode(claims))}.signature';
+}
 
 void main() {
   final account = SteamAccount.fromJson(<String, dynamic>{
@@ -92,4 +102,40 @@ void main() {
       throwsA(isA<SteamApiException>()),
     );
   });
+
+  test(
+    'refresh reports AccessDenied when Steam answers empty with Eresult 15',
+    () async {
+      final staleSessionAccount = account.copyWith(
+        session: account.session.copyWith(
+          accessToken: fakeJwt(<String, Object?>{'exp': 1000000000}),
+          refreshToken: fakeJwt(<String, Object?>{'exp': 2000000000}),
+        ),
+      );
+      final client = SteamClient(
+        client: MockClient((request) async {
+          expect(
+            request.url.path.endsWith('GenerateAccessTokenForApp/v1/'),
+            isTrue,
+          );
+          return http.Response(
+            '{"response":{}}',
+            200,
+            headers: <String, String>{'x-eresult': '15'},
+          );
+        }),
+      );
+
+      await expectLater(
+        client.ensureAccessToken(staleSessionAccount),
+        throwsA(
+          isA<SteamApiException>().having(
+            (error) => error.code,
+            'code',
+            'session_denied',
+          ),
+        ),
+      );
+    },
+  );
 }

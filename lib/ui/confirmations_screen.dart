@@ -80,7 +80,6 @@ class _ConfirmationsScreenState extends State<ConfirmationsScreen> {
                 icon: _loading
                     ? Icons.hourglass_top_rounded
                     : Icons.refresh_rounded,
-                accent: NeoColors.cyan,
               ),
             ],
           ),

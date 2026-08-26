@@ -23,6 +23,11 @@ class ConfirmationBatch {
   final List<SteamConfirmation> items;
 }
 
+/// Steam reports the real EResult code in a response header even when the
+/// HTTP status is 200 and the body is empty.
+int? eresultOf(http.Response response) =>
+    int.tryParse(response.headers['x-eresult'] ?? '');
+
 class SteamClient {
   SteamClient({http.Client? client})
     : _client = client ?? http.Client(),
@@ -75,13 +80,24 @@ class SteamClient {
           },
         )
         .timeout(const Duration(seconds: 20));
+    // Steam reports failures as HTTP 200 with an empty body and the real
+    // reason in X-Eresult — most commonly 15 (AccessDenied) for maFile
+    // sessions minted on another IP or device.
+    if (eresultOf(response) == 15) {
+      throw const SteamApiException('session_denied');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const SteamApiException('refresh_failed');
     }
 
     final decoded = jsonDecode(response.body);
     final body = decoded is Map ? decoded['response'] : null;
-    if (body is! Map) throw const SteamApiException('refresh_failed');
+    if (body is! Map || body.isEmpty) {
+      if (eresultOf(response) == 15) {
+        throw const SteamApiException('session_denied');
+      }
+      throw const SteamApiException('refresh_failed');
+    }
     final nextAccess = body['access_token']?.toString();
     if (nextAccess == null || nextAccess.isEmpty) {
       throw const SteamApiException('refresh_failed');
@@ -200,6 +216,10 @@ class SteamClient {
           },
         )
         .timeout(const Duration(seconds: 20));
+    if (response.statusCode == 401 || response.statusCode == 403) {
+      // The token was rejected outright; treat it like a dead session.
+      throw const SteamApiException('session_required');
+    }
     if (response.statusCode < 200 || response.statusCode >= 300) {
       throw const SteamApiException('profile_failed');
     }

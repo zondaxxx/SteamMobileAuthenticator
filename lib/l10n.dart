@@ -198,6 +198,7 @@ class AppStrings {
     'error_no_accounts':
         'No matching accounts were found in the selected files.',
     'error_session_required': 'The Steam session is missing or expired.',
+    'error_session_denied': 'Steam denied this session renewal (AccessDenied). Tokens from this maFile are tied to the IP or device where it was created — sign in again via "Add authenticator" or import a fresh maFile.',
     'error_refresh_expired':
         'The refresh token expired. Sign in again using a compatible client.',
     'error_refresh_failed': 'Steam could not refresh this session.',
@@ -233,7 +234,7 @@ class AppStrings {
     'error_login_bad_credentials':
         'Steam rejected the account name or password.',
     'error_login_bad_guard': 'Steam rejected the Guard code.',
-    'error_login_poll_failed': 'Could not check Steam sign-in status.',
+    'error_login_poll_failed': 'Could not check Steam sign-in status. Check the connection and start the sign-in again.',
     'error_login_timeout': 'Steam sign-in timed out. Start again.',
     'error_enroll_phone_required':
         'Add and verify a phone number on this Steam account first.',
@@ -411,6 +412,7 @@ class AppStrings {
     'error_invalid_mafile': 'Выбранный maFile некорректен.',
     'error_no_accounts': 'В выбранных файлах не найдено подходящих аккаунтов.',
     'error_session_required': 'Сессия Steam отсутствует или истекла.',
+    'error_session_denied': 'Steam отклонил продление этой сессии (AccessDenied). Токены из maFile привязаны к IP или устройству, где он был создан — войди заново через «Добавить аутентификатор» или импортируй свежий maFile.',
     'error_refresh_expired':
         'Refresh-токен истёк. Выполни вход через совместимый клиент.',
     'error_refresh_failed': 'Steam не смог обновить сессию.',
@@ -442,7 +444,7 @@ class AppStrings {
         'Не удалось безопасно зашифровать пароль Steam.',
     'error_login_bad_credentials': 'Steam отклонил логин или пароль.',
     'error_login_bad_guard': 'Steam отклонил код Guard.',
-    'error_login_poll_failed': 'Не удалось проверить статус входа Steam.',
+    'error_login_poll_failed': 'Не удалось проверить статус входа Steam. Проверь интернет и начни вход заново.',
     'error_login_timeout': 'Истекло время входа Steam. Начни заново.',
     'error_enroll_phone_required':
         'Сначала добавь и подтверди номер телефона в Steam.',

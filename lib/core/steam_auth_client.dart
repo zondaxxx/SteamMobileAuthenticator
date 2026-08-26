@@ -210,15 +210,27 @@ class SteamAuthClient {
 
   Future<LoginTokens> pollLogin(LoginSession session) async {
     var clientId = session.clientId;
-    for (var attempt = 0; attempt < 30; attempt++) {
-      final response = await _postApi(
-        '$_authPath/PollAuthSessionStatus/v1/',
-        <String, String>{
-          'client_id': clientId,
-          'request_id': session.requestId,
-        },
-        errorCode: 'login_poll_failed',
-      );
+    var consecutiveFailures = 0;
+    for (var attempt = 0; attempt < 40; attempt++) {
+      late final Map<String, dynamic> response;
+      try {
+        response = await _postApi(
+          '$_authPath/PollAuthSessionStatus/v1/',
+          <String, String>{
+            'client_id': clientId,
+            'request_id': session.requestId,
+          },
+          errorCode: 'login_poll_failed',
+        );
+        consecutiveFailures = 0;
+      } on SteamAuthException {
+        // A single failed request (network hiccup, edge challenge) must not
+        // abort the whole sign-in; Steam keeps the session open server-side.
+        consecutiveFailures++;
+        if (consecutiveFailures >= 4) rethrow;
+        await Future<void>.delayed(Duration(seconds: session.intervalSeconds));
+        continue;
+      }
       final nextId = response['new_client_id']?.toString();
       if (nextId?.isNotEmpty == true && nextId != '0') clientId = nextId!;
       final refresh = response['refresh_token']?.toString();
@@ -345,9 +357,26 @@ class SteamAuthClient {
     final decoded = _responseObject(response, errorCode);
     if (!unwrapResponse) return decoded;
     final nested = decoded['response'];
-    if (nested is! Map) throw SteamAuthException(errorCode);
+    // An empty payload combined with a failing EResult means Steam rejected
+    // the request without an HTTP error — surface the real reason.
+    if (nested is! Map || nested.isEmpty) {
+      final eresult = int.tryParse(response.headers['x-eresult'] ?? '');
+      if (eresult != null && eresult != 1) {
+        throw SteamAuthException(_mapEresult(eresult, errorCode));
+      }
+      if (nested is! Map) throw SteamAuthException(errorCode);
+      // Eresult 1 with an empty payload is a valid "nothing yet" answer.
+      return const <String, dynamic>{};
+    }
     return Map<String, dynamic>.from(nested);
   }
+
+  String _mapEresult(int eresult, String fallback) => switch (eresult) {
+    5 => 'login_bad_credentials',
+    15 => 'session_denied',
+    84 => 'login_rate_limited',
+    _ => fallback,
+  };
 
   Map<String, dynamic> _responseObject(http.Response response, String code) {
     if (response.statusCode == 429) {
